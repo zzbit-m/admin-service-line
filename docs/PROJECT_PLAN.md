@@ -1,46 +1,47 @@
-\# PROJECT PLAN
+# Project Plan
 
+## Overview
 
+Internal Admin Service Portal — backend for managing service requests and resources with role-based access control.
 
-\## Overview
+## Stack
 
+- FastAPI + Python 3.11
+- PostgreSQL 15
+- Async SQLAlchemy + asyncpg
+- Pydantic v2
+- JWT auth (python-jose + bcrypt)
+- Alembic migrations
 
+---
 
-Admin service backend for managing booking via LINE.
+## Phase 1 — Complete ✅
 
+User authentication (register/login with JWT), service request CRUD for users, admin role with request/resource management.
 
+### What was built
 
-\## Features
+- User registration and login with bcrypt hashing and JWT tokens
+- Authenticated user endpoints: create request, list own requests, get request by ID
+- Admin endpoints: list all requests (with status filter), update request status, CRUD resources
+- Pydantic v2 schemas with `Literal` type constraints for status and resource type
+- Proper error codes: 400/401/403/404
+- Alembic migrations configured with all models imported for autogenerate
+- Lifespan handler for clean engine disposal on shutdown
 
+---
 
+## Phase 2 — Planned
 
-\* User (LINE user id)
+Things to add in future phases:
 
-\* Resource (room / vehicle)
-
-\* Booking system (with time conflict prevention)
-
-
-
-\## Stack
-
-
-
-\* FastAPI
-
-\* PostgreSQL
-
-\* SQLAlchemy (async)
-
-\* Pydantic
-
-
-
-\## Goal
-
-
-
-Build MVP first, then expand
-
-
-
+- Pagination for list endpoints
+- LINE Messaging API integration (webhook, reply messages)
+- Request cancellation by user
+- Email notifications on status change
+- Audit log for admin actions
+- Rate limiting
+- API key management for external integrations
+- Unit and integration tests
+- CI/CD pipeline
+- Deployment configuration
