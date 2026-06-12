@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LINE Login Test</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; }
+    button { padding: 12px 24px; font-size: 16px; background: #06C755; color: white; border: none; border-radius: 6px; cursor: pointer; margin-top: 10px; }
+    pre { background: #f4f4f4; padding: 16px; border-radius: 6px; word-break: break-all; white-space: pre-wrap; }
+    .hidden { display: none; }
+    label { font-weight: bold; display: block; margin-top: 20px; }
+    #status { color: gray; font-size: 14px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h2>LINE Login Test</h2>
+  <div id="status">Initializing LIFF...</div>
+
+  <div id="login-section" class="hidden">
+    <button onclick="liff.login()">Login with LINE</button>
+  </div>
+
+  <div id="result-section" class="hidden">
+    <label>LINE Access Token:</label>
+    <pre id="token-box"></pre>
+
+    <label>Profile:</label>
+    <pre id="profile-box"></pre>
+
+    <button onclick="testBackend()">Test POST /auth/line</button>
+
+    <label>Backend Response:</label>
+    <pre id="backend-box"></pre>
+  </div>
+
+  <script>
+    const LIFF_ID = "2010375597-BkOzSfco";
+    const API_BASE = "";
+
+    async function init() {
+      const status = document.getElementById("status");
+      try {
+        await liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true });
+        status.textContent = "LIFF initialized. Logged in: " + liff.isLoggedIn();
+
+        if (!liff.isLoggedIn()) {
+          document.getElementById("login-section").classList.remove("hidden");
+          return;
+        }
+
+        const token = liff.getAccessToken();
+        const profile = await liff.getProfile();
+
+        document.getElementById("login-section").classList.add("hidden");
+        document.getElementById("result-section").classList.remove("hidden");
+        document.getElementById("token-box").textContent = token;
+        document.getElementById("profile-box").textContent = JSON.stringify(profile, null, 2);
+        status.textContent = "Logged in as: " + profile.displayName;
+
+      } catch (err) {
+        status.textContent = "LIFF init error: " + err.message;
+      }
+    }
+
+    async function testBackend() {
+      const token = liff.getAccessToken();
+      const box = document.getElementById("backend-box");
+      box.textContent = "Calling...";
+      try {
+        const resp = await fetch(`${API_BASE}/auth/line`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ access_token: token })
+        });
+        const data = await resp.json();
+        box.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        box.textContent = "Error: " + err.message;
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

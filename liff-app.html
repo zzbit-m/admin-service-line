@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Service Portal</title>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; background: #f5f5f5; }
+    .header { background: #06C755; color: white; padding: 16px; text-align: center; font-size: 18px; font-weight: bold; }
+    .container { padding: 16px; max-width: 480px; margin: 0 auto; }
+    .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    .btn { display: block; width: 100%; padding: 12px; background: #06C755; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 8px; }
+    .btn.secondary { background: #eee; color: #333; }
+    .status { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+    .status.pending { background: #fff3cd; color: #856404; }
+    .status.approved { background: #d4edda; color: #155724; }
+    .status.rejected { background: #f8d7da; color: #721c24; }
+    input, textarea, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; margin-top: 6px; }
+    label { font-size: 14px; font-weight: bold; color: #555; margin-top: 12px; display: block; }
+    #status-msg { text-align: center; color: gray; padding: 20px; }
+  </style>
+</head>
+<body>
+  <div class="header">Admin Service Portal</div>
+  <div class="container" id="app">
+    <div id="status-msg">Loading...</div>
+  </div>
+
+  <script>
+    const LIFF_ID = "2010375597-BkOzSfco";
+    const API_BASE = "http://localhost:8001";
+    let accessToken = null;
+
+    const params = new URLSearchParams(window.location.search);
+    const page = params.get("page") || "requests";
+
+    async function init() {
+      await liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true });
+      if (!liff.isLoggedIn()) { liff.login(); return; }
+
+      const lineToken = liff.getAccessToken();
+      const res = await fetch(`${API_BASE}/auth/line`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ access_token: lineToken })
+      });
+      const data = await res.json();
+      accessToken = data.access_token;
+
+      if (page === "new") renderNewRequest();
+      else if (page === "profile") renderProfile();
+      else renderRequests();
+    }
+
+    async function apiGet(path) {
+      const res = await fetch(`${API_BASE}${path}`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      return res.json();
+    }
+
+    async function apiPost(path, body) {
+      const res = await fetch(`${API_BASE}${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify(body)
+      });
+      return res.json();
+    }
+
+    async function renderRequests() {
+      const app = document.getElementById("app");
+      app.innerHTML = "<div id='status-msg'>Loading requests...</div>";
+      try {
+        const data = await apiGet("/requests/me");
+        const requests = data.requests || data;
+        if (!requests.length) {
+          app.innerHTML = `
+            <div class="card"><p style="text-align:center;color:gray">No requests yet</p></div>
+            <button class="btn" onclick="renderNewRequest()">➕ New Request</button>`;
+          return;
+        }
+        app.innerHTML = requests.map(r => `
+          <div class="card">
+            <strong>${r.title}</strong>
+            <span class="status ${r.status}" style="float:right">${r.status}</span>
+            <p style="font-size:13px;color:#666;margin-top:6px">${r.description || ""}</p>
+          </div>`).join("") +
+          `<button class="btn" onclick="renderNewRequest()">➕ New Request</button>`;
+      } catch(e) {
+        app.innerHTML = "<div class='card'>Failed to load requests.</div>";
+      }
+    }
+
+    async function renderNewRequest() {
+      const resources = await apiGet("/admin/resources");
+      const opts = (resources.resources || resources).map(r =>
+        `<option value="${r.id}">${r.name}</option>`).join("");
+      document.getElementById("app").innerHTML = `
+        <div class="card">
+          <h3 style="margin-bottom:12px">New Request</h3>
+          <label>Title</label>
+          <input id="title" placeholder="Enter title" />
+          <label>Description</label>
+          <textarea id="desc" rows="3" placeholder="Enter description"></textarea>
+          <label>Resource</label>
+          <select id="resource"><option value="">None</option>${opts}</select>
+          <button class="btn" onclick="submitRequest()">Submit</button>
+          <button class="btn secondary" onclick="renderRequests()">Cancel</button>
+        </div>`;
+    }
+
+    async function submitRequest() {
+      const title = document.getElementById("title").value.trim();
+      const desc = document.getElementById("desc").value.trim();
+      const resource_id = document.getElementById("resource").value || null;
+      if (!title) { alert("Title is required"); return; }
+      await apiPost("/requests", { title, description: desc, resource_id });
+      renderRequests();
+    }
+
+    async function renderProfile() {
+      const profile = await liff.getProfile();
+      document.getElementById("app").innerHTML = `
+        <div class="card" style="text-align:center">
+          <img src="${profile.pictureUrl}" style="width:80px;height:80px;border-radius:50%;margin-bottom:12px" />
+          <h3>${profile.displayName}</h3>
+          <p style="color:gray;font-size:13px">${profile.statusMessage || ""}</p>
+        </div>
+        <button class="btn secondary" onclick="renderRequests()">← Back</button>`;
+    }
+
+    init();
+  </script>
+</body>
+</html>

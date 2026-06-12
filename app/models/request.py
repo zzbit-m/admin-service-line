@@ -25,3 +25,4 @@ class ServiceRequest(Base):
 
     user = relationship("User", back_populates="service_requests")
     resource = relationship("Resource", back_populates="service_requests")
+    attachments = relationship("Attachment", back_populates="service_request")

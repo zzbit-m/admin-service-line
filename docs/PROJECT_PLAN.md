@@ -9,6 +9,7 @@ Internal Admin Service Portal — backend for managing service requests and reso
 - FastAPI + Python 3.11
 - PostgreSQL 15
 - Async SQLAlchemy + asyncpg
+- MinIO (S3-compatible file storage via boto3)
 - Pydantic v2
 - JWT auth (python-jose + bcrypt)
 - Alembic migrations
@@ -17,31 +18,46 @@ Internal Admin Service Portal — backend for managing service requests and reso
 
 ## Phase 1 — Complete ✅
 
-User authentication (register/login with JWT), service request CRUD for users, admin role with request/resource management.
+Auth (register/login), user request CRUD, admin role, resource management.
 
-### What was built
-
-- User registration and login with bcrypt hashing and JWT tokens
-- Authenticated user endpoints: create request, list own requests, get request by ID
-- Admin endpoints: list all requests (with status filter), update request status, CRUD resources
-- Pydantic v2 schemas with `Literal` type constraints for status and resource type
-- Proper error codes: 400/401/403/404
-- Alembic migrations configured with all models imported for autogenerate
-- Lifespan handler for clean engine disposal on shutdown
+Includes: JWT auth, bcrypt hashing, role-based access (user/admin), Pydantic Literal constraints, Alembic setup, lifespan handler.
 
 ---
 
-## Phase 2 — Planned
+## Phase 2 — Complete ✅
 
-Things to add in future phases:
+Status transition enforcement, time conflict detection, user cancel endpoint, pagination.
 
-- Pagination for list endpoints
-- LINE Messaging API integration (webhook, reply messages)
-- Request cancellation by user
-- Email notifications on status change
-- Audit log for admin actions
-- Rate limiting
-- API key management for external integrations
-- Unit and integration tests
-- CI/CD pipeline
-- Deployment configuration
+Includes: `VALID_TRANSITIONS` map, `start_time`/`end_time` columns on service_requests, overlap check on create (409), `PATCH /requests/{id}/cancel`, `skip`/`limit` on list endpoints.
+
+---
+
+## Phase 3 — Complete ✅
+
+File attachment upload via S3-compatible MinIO storage, Redis cache layer for resource list.
+
+Includes: `Attachment` model, boto3 S3 client with `run_in_executor`, file type/size validation (5MB max), `POST /requests/{id}/attachments` (201), `GET /requests/{id}/attachments`. Redis cache-aside on `GET /admin/resources` with TTL 60s and invalidation on create/update.
+
+---
+
+## Phase 4 — Complete ✅
+
+n8n webhook integration on admin status changes, LINE login via LIFF.
+
+Includes: `httpx.AsyncClient` POST to n8n webhook on approve/reject (silent failure), `POST /auth/line` endpoint with LINE token verification and auto-provisioning, LIFF test page (`liff-test.html`), `REDIS_HOST`/`REDIS_PORT` moved to `Settings` config.
+
+---
+
+## Phase 5 — Complete ✅
+
+LINE login stores `displayName` from LINE profile into `full_name` column on users table.
+
+Includes: `full_name` column added to User model (`String(255)`, nullable), Alembic migration `add_full_name_to_users`, `POST /auth/line` INSERT updated to include `full_name` param from LINE profile response.
+
+---
+
+## Future Ideas
+
+- Redis caching for request status queries
+- Background task queue (future-ready)
+- n8n webhook for additional event types
