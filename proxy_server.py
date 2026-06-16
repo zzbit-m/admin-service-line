@@ -4,13 +4,13 @@ import urllib.error
 import os
 import sys
 
-BACKEND = "http://localhost:8001"
+BACKEND = "http://127.0.0.1:8001"
 
 
 class ProxyHandler(http.server.SimpleHTTPRequestHandler):
     def should_proxy(self, path):
         clean_path = path.split("?")[0]
-        prefixes = ["/auth", "/requests", "/admin", "/attachments"]
+        prefixes = ["/auth", "/requests", "/admin", "/attachments", "/webhook"]
         return any(clean_path == p or clean_path.startswith(p + "/") for p in prefixes)
 
     def do_GET(self):
@@ -61,6 +61,6 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 3000
-    server = http.server.HTTPServer(("0.0.0.0", port), ProxyHandler)
+    server = http.server.ThreadingHTTPServer(("0.0.0.0", port), ProxyHandler)
     print(f"Proxy server on port {port}")
     server.serve_forever()

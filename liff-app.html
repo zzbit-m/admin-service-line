@@ -458,6 +458,8 @@
   let adminFilter  = "pending";
   let selectedType = null;   // Step 5: type tile state
   let _flashId     = null;   // Step 10: card flash after submit
+  let allUserRequests = [];  // Client-side cache for filtering
+  let allAdminRequests = []; // Client-side cache for filtering
 
   // ─── Helpers ──────────────────────────────────────────────
   function decodeToken(t) {
@@ -799,44 +801,23 @@
     app.className = "page pb-fab";
     try {
       const data = await apiGet("/requests/me");
-      const list = Array.isArray(data) ? data : (data.requests || []);
+      allUserRequests = Array.isArray(data) ? data : (data.requests || []);
 
-      if (!list.length) {
-        // Step 3 — improved empty state with inline button
-        app.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-icon">📋</div>
-            <h3>No requests yet</h3>
-            <p>Submit your first service request below.</p>
-            <button class="btn btn-primary" style="margin-top:16px;max-width:220px"
-                    onclick="renderNewRequest()">＋ New Request</button>
-          </div>`;
-      } else {
-        const pending = list.filter(r => r.status === "pending");
-        const others  = list.filter(r => r.status !== "pending");
-        let html = "";
+      // Render search controls
+      app.innerHTML = `
+        <div class="search-filter-row" style="margin-bottom:16px; display:flex; gap:8px;">
+          <input type="text" id="user-search" class="form-control" placeholder="Search title..." oninput="filterUserRequests()" style="margin:0; padding:9px 12px; font-size:13px; border-radius:10px; border:1.5px solid var(--slate-200);">
+          <select id="user-type-filter" class="form-control" onchange="filterUserRequests()" style="margin:0; width:120px; padding:9px 12px; font-size:13px; border-radius:10px; border:1.5px solid var(--slate-200);">
+            <option value="">All Types</option>
+            <option value="room_booking">🏢 Room</option>
+            <option value="vehicle_booking">🚗 Vehicle</option>
+            <option value="maintenance">🔧 Maintenance</option>
+            <option value="other">📋 Other</option>
+          </select>
+        </div>
+        <div id="user-list-container"></div>`;
 
-        if (pending.length) {
-          html += `<div class="section-hd"><h2>Active</h2><span class="count-chip">${pending.length}</span></div>`;
-          html += pending.map(r => userCard(r)).join("");
-        }
-        if (others.length) {
-          html += `
-            <div class="section-hd" style="margin-top:${pending.length ? 20 : 0}px">
-              <h2>History</h2>
-              <button class="btn btn-ghost btn-sm" onclick="clearUserHistory()" style="margin:0;padding:6px 12px;font-size:11px;width:auto">Clear History</button>
-            </div>`;
-          html += others.map(r => userCard(r)).join("");
-        }
-        app.innerHTML = html;
-
-        // Step 10 — flash newly created card
-        if (_flashId) {
-          const el = document.querySelector(`[data-id="${_flashId}"]`);
-          if (el) el.classList.add("flash");
-          _flashId = null;
-        }
-      }
+      filterUserRequests();
 
       // FAB
       if (!document.getElementById("fab")) {
@@ -856,6 +837,54 @@
           <p>Check your connection and try again.</p>
           <button class="btn-retry" onclick="renderUserDashboard()">↻ Retry</button>
         </div>`;
+    }
+  }
+
+  function filterUserRequests() {
+    const search = document.getElementById("user-search")?.value?.toLowerCase() || "";
+    const type = document.getElementById("user-type-filter")?.value || "";
+    const container = document.getElementById("user-list-container");
+    if (!container) return;
+
+    const filtered = allUserRequests.filter(r => {
+      const matchesSearch = !search || r.title.toLowerCase().includes(search) || (r.description && r.description.toLowerCase().includes(search));
+      const matchesType = !type || r.request_type === type;
+      return matchesSearch && matchesType;
+    });
+
+    if (!filtered.length) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🔍</div>
+          <h3>No matching requests</h3>
+          <p>Try adjusting your search or filter.</p>
+        </div>`;
+      return;
+    }
+
+    const pending = filtered.filter(r => r.status === "pending");
+    const others  = filtered.filter(r => r.status !== "pending");
+    let html = "";
+
+    if (pending.length) {
+      html += `<div class="section-hd"><h2>Active</h2><span class="count-chip">${pending.length}</span></div>`;
+      html += pending.map(r => userCard(r)).join("");
+    }
+    if (others.length) {
+      html += `
+        <div class="section-hd" style="margin-top:${pending.length ? 20 : 0}px">
+          <h2>History</h2>
+          <button class="btn btn-ghost btn-sm" onclick="clearUserHistory()" style="margin:0;padding:6px 12px;font-size:11px;width:auto">Clear History</button>
+        </div>`;
+      html += others.map(r => userCard(r)).join("");
+    }
+    container.innerHTML = html;
+
+    // Step 10 — flash newly created card
+    if (_flashId) {
+      const el = document.querySelector(`[data-id="${_flashId}"]`);
+      if (el) el.classList.add("flash");
+      _flashId = null;
     }
   }
 
@@ -1142,17 +1171,27 @@
     removeFab();
     app.className = "page";
 
-    // Show tabs immediately with skeleton list
+    // Show tabs immediately with search controls and skeleton list
     app.innerHTML = `
       <div class="tabs" id="admin-tabs">
         <div class="tab ${adminFilter==="pending"?"active":""}" onclick="switchAdminTab('pending')">⏳ Pending</div>
         <div class="tab ${adminFilter==="approved"?"active":""}" onclick="switchAdminTab('approved')">✅ Done</div>
         <div class="tab ${adminFilter==="all"?"active":""}" onclick="switchAdminTab('all')">All</div>
       </div>
+      <div class="search-filter-row" style="margin-bottom:16px; display:flex; gap:8px;">
+        <input type="text" id="admin-search" class="form-control" placeholder="Search title or user..." oninput="filterAdminRequests()" style="margin:0; padding:9px 12px; font-size:13px; border-radius:10px; border:1.5px solid var(--slate-200);">
+        <select id="admin-type-filter" class="form-control" onchange="filterAdminRequests()" style="margin:0; width:120px; padding:9px 12px; font-size:13px; border-radius:10px; border:1.5px solid var(--slate-200);">
+          <option value="">All Types</option>
+          <option value="room_booking">🏢 Room</option>
+          <option value="vehicle_booking">🚗 Vehicle</option>
+          <option value="maintenance">🔧 Maintenance</option>
+          <option value="other">📋 Other</option>
+        </select>
+      </div>
       <div id="admin-list">${skeletonList(4)}</div>`;
 
     // Step 6 — fetch pending count for tab badge (parallel with list load)
-    const [,] = await Promise.all([
+    await Promise.all([
       updatePendingBadge(),
       loadAdminList()
     ]);
@@ -1179,30 +1218,14 @@
     try {
       const q    = adminFilter !== "all" ? `?status=${adminFilter}` : "";
       const data = await apiGet(`/admin/requests${q}`);
-      let list   = Array.isArray(data) ? data : (data.requests || []);
+      allAdminRequests = Array.isArray(data) ? data : (data.requests || []);
 
       // Step 9 — FIFO: oldest pending first
       if (adminFilter === "pending") {
-        list = [...list].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        allAdminRequests.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
       }
 
-      if (!list.length) {
-        el.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-icon">${adminFilter === "pending" ? "🎉" : "📭"}</div>
-            <h3>${adminFilter === "pending" ? "All clear!" : "Nothing here"}</h3>
-            <p>${adminFilter === "pending" ? "No pending requests right now." : "No requests match this filter."}</p>
-          </div>`;
-        return;
-      }
-
-      const label = adminFilter === "pending" ? "Pending Review" : adminFilter === "approved" ? "Approved" : "All Requests";
-      el.innerHTML = `
-        <div class="section-hd">
-          <h2>${label}</h2>
-          <span class="count-chip">${list.length}</span>
-        </div>` +
-        list.map(r => adminCard(r)).join("");
+      filterAdminRequests();
     } catch {
       el.innerHTML = `
         <div class="empty-state">
@@ -1211,6 +1234,42 @@
           <button class="btn-retry" onclick="loadAdminList()">↻ Retry</button>
         </div>`;
     }
+  }
+
+  function filterAdminRequests() {
+    const el = document.getElementById("admin-list");
+    if (!el) return;
+
+    const search = document.getElementById("admin-search")?.value?.toLowerCase() || "";
+    const type = document.getElementById("admin-type-filter")?.value || "";
+
+    const filtered = allAdminRequests.filter(r => {
+      const matchesSearch = !search || 
+        r.title.toLowerCase().includes(search) || 
+        (r.description && r.description.toLowerCase().includes(search)) ||
+        (r.full_name && r.full_name.toLowerCase().includes(search)) ||
+        r.user_id.toLowerCase().includes(search);
+      const matchesType = !type || r.request_type === type;
+      return matchesSearch && matchesType;
+    });
+
+    if (!filtered.length) {
+      el.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🔍</div>
+          <h3>No matching requests</h3>
+          <p>Try adjusting your search or filter.</p>
+        </div>`;
+      return;
+    }
+
+    const label = adminFilter === "pending" ? "Pending Review" : adminFilter === "approved" ? "Approved" : "All Requests";
+    el.innerHTML = `
+      <div class="section-hd">
+        <h2>${label}</h2>
+        <span class="count-chip">${filtered.length}</span>
+      </div>` +
+      filtered.map(r => adminCard(r)).join("");
   }
 
   // Step 7: adminCard — data-status border, full name, relativeTime
