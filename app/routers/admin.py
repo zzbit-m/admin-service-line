@@ -13,9 +13,15 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.request import RequestResponse, StatusUpdate
 from app.schemas.resource import ResourceCreate, ResourceResponse, ResourceUpdate
+from app.schemas.stats import AdminStatsResponse
 from app.services import admin_service
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+@router.get("/stats", response_model=AdminStatsResponse)
+async def get_stats(db: AsyncSession = Depends(get_db), current_user: User = Depends(require_admin)):
+    return await admin_service.get_admin_stats(db)
 
 
 @router.get("/requests", response_model=list[RequestResponse])
@@ -71,7 +77,7 @@ async def update_request_status(request_id: UUID, body: StatusUpdate, db: AsyncS
             "rejected": "\u274c Your request has been rejected.",
         }
         if body.status in status_messages:
-            await pool.enqueue_job("send_notification", str(result.user_id), status_messages[body.status])
+            await pool.enqueue_job("send_notification", str(result.user_id), status_messages[body.status], str(request_id))
     except Exception:
         pass
     return result

@@ -415,6 +415,45 @@
     }
     @keyframes progressPulse { from { opacity:.6; } to { opacity:1; } }
 
+    /* ── Stats and Reports Dashboard ────────────────────────── */
+    .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 16px; }
+    .stat-card {
+      background: var(--white); padding: 14px 16px; border-radius: var(--radius-md);
+      border: 1px solid var(--slate-100); text-align: left;
+    }
+    .stat-card-label { font-size: 11px; font-weight: 700; color: var(--slate-400); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; }
+    .stat-card-value { font-size: 20px; font-weight: 800; color: var(--slate-800); }
+    
+    .chart-container {
+      background: var(--white); padding: 16px; border-radius: var(--radius-md);
+      border: 1px solid var(--slate-100); margin-bottom: 12px;
+    }
+    .chart-title { font-size: 13px; font-weight: 700; color: var(--slate-800); margin-bottom: 12px; }
+    
+    .chart-bar-row { margin-bottom: 10px; }
+    .chart-bar-row:last-child { margin-bottom: 0; }
+    .chart-bar-header { display: flex; justify-content: space-between; font-size: 12px; font-weight: 500; color: var(--slate-600); margin-bottom: 4px; }
+    .chart-bar-bg { height: 8px; background: var(--slate-100); border-radius: 4px; overflow: hidden; }
+    .chart-bar-fill { height: 100%; border-radius: 4px; transition: width .6s ease; }
+    
+    .chart-bar-room   { background: #3b82f6; }
+    .chart-bar-vehicle{ background: #10b981; }
+    .chart-bar-maint  { background: #f59e0b; }
+    .chart-bar-other  { background: #8b5cf6; }
+
+    /* ── Resource Management ────────────────────────────────── */
+    .resource-list { display: flex; flex-direction: column; gap: 8px; }
+    .resource-card {
+      background: var(--white); border-radius: var(--radius-md); border: 1px solid var(--slate-100);
+      padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;
+      transition: var(--transition);
+    }
+    .resource-card:hover { border-color: var(--slate-200); }
+    .resource-info { display: flex; flex-direction: column; gap: 2px; }
+    .resource-name { font-size: 14px; font-weight: 700; color: var(--slate-800); }
+    .resource-desc { font-size: 12px; color: var(--slate-400); }
+    .resource-actions { display: flex; gap: 8px; align-items: center; }
+
     /* ── Utility ─────────────────────────────────────────────── */
     .pb-fab { padding-bottom: 88px; }
     .mt-12  { margin-top: 12px; }
@@ -455,6 +494,7 @@
   let accessToken  = null;
   let userRole     = null;
   let userName     = null;
+  let currentUserId = null;
   let adminFilter  = "pending";
   let selectedType = null;   // Step 5: type tile state
   let _flashId     = null;   // Step 10: card flash after submit
@@ -703,6 +743,7 @@
     const payload = decodeToken(accessToken);
     userRole      = payload.role || role;
     userName      = payload.full_name || payload.sub || null;
+    currentUserId = payload.sub || null;
     setHeaderRole(userRole);
     if (userRole === "admin") {
       setHeaderActions(`
@@ -768,6 +809,7 @@
       const payload  = decodeToken(accessToken);
       userRole       = payload.role || "user";
       userName       = payload.full_name || payload.sub || null;
+      currentUserId  = payload.sub || null;
 
       setHeaderRole(userRole);
 
@@ -981,6 +1023,7 @@
         </div>` : ""}
 
         <div id="attachments-section"></div>
+        <div id="comments-section"></div>
 
         ${canCancel ? `
         <button class="btn btn-danger" id="cancel-btn"
@@ -995,6 +1038,7 @@
         </button>` : ""}`;
       // Load attachments after main content renders
       loadAttachments(r.id);
+      loadComments(r.id);
     } catch {
       app.innerHTML = `
         <button class="back-btn" onclick="renderUserDashboard()">‹ Back</button>
@@ -1165,19 +1209,35 @@
 
   // ══════════════════════════ ADMIN VIEWS ══════════════════════════
 
+  function renderAdminHeaderTabs() {
+    return `
+      <div class="tabs" id="admin-tabs" style="overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; margin-bottom: 12px; gap: 8px; display: flex;">
+        <div class="tab ${adminFilter==="pending"?"active":""}" onclick="switchAdminTab('pending')" style="flex: 0 0 auto; padding: 10px 16px;">⏳ Pending</div>
+        <div class="tab ${adminFilter==="approved"?"active":""}" onclick="switchAdminTab('approved')" style="flex: 0 0 auto; padding: 10px 16px;">✅ Done</div>
+        <div class="tab ${adminFilter==="all"?"active":""}" onclick="switchAdminTab('all')" style="flex: 0 0 auto; padding: 10px 16px;">All</div>
+        <div class="tab ${adminFilter==="resources"?"active":""}" onclick="switchAdminTab('resources')" style="flex: 0 0 auto; padding: 10px 16px;">🏢 Resources</div>
+        <div class="tab ${adminFilter==="reports"?"active":""}" onclick="switchAdminTab('reports')" style="flex: 0 0 auto; padding: 10px 16px;">📊 Reports</div>
+      </div>`;
+  }
+
   // Step 6: renderAdminDashboard — pending count badge, skeleton loading
   async function renderAdminDashboard() {
     const app = document.getElementById("app");
     removeFab();
     app.className = "page";
 
+    if (adminFilter === "reports") {
+      await renderAdminReports();
+      return;
+    }
+    if (adminFilter === "resources") {
+      await renderAdminResources();
+      return;
+    }
+
     // Show tabs immediately with search controls and skeleton list
     app.innerHTML = `
-      <div class="tabs" id="admin-tabs">
-        <div class="tab ${adminFilter==="pending"?"active":""}" onclick="switchAdminTab('pending')">⏳ Pending</div>
-        <div class="tab ${adminFilter==="approved"?"active":""}" onclick="switchAdminTab('approved')">✅ Done</div>
-        <div class="tab ${adminFilter==="all"?"active":""}" onclick="switchAdminTab('all')">All</div>
-      </div>
+      ${renderAdminHeaderTabs()}
       <div class="search-filter-row" style="margin-bottom:16px; display:flex; gap:8px;">
         <input type="text" id="admin-search" class="form-control" placeholder="Search title or user..." oninput="filterAdminRequests()" style="margin:0; padding:9px 12px; font-size:13px; border-radius:10px; border:1.5px solid var(--slate-200);">
         <select id="admin-type-filter" class="form-control" onchange="filterAdminRequests()" style="margin:0; width:120px; padding:9px 12px; font-size:13px; border-radius:10px; border:1.5px solid var(--slate-200);">
@@ -1209,6 +1269,290 @@
   function switchAdminTab(tab) {
     adminFilter = tab;
     renderAdminDashboard();
+  }
+
+  // ══════════════════════════ REPORTS & RESOURCES VIEWS ══════════════════════════
+
+  async function renderAdminReports() {
+    const app = document.getElementById("app");
+    removeFab();
+    app.className = "page";
+    app.innerHTML = `
+      ${renderAdminHeaderTabs()}
+      <div id="reports-container">
+        <div class="loader"><div class="spinner"></div><p class="loader-text">Generating reports…</p></div>
+      </div>`;
+    await loadAdminReports();
+  }
+
+  async function loadAdminReports() {
+    const container = document.getElementById("reports-container");
+    if (!container) return;
+    try {
+      const stats = await apiGet("/admin/stats");
+      const total = stats.total_requests;
+      const types = stats.type_distribution;
+      const monthly = stats.monthly_reports;
+      const weekly = stats.weekly_reports;
+
+      const totalSum = total.pending + total.approved + total.rejected + total.cancelled;
+      const completionRate = totalSum ? Math.round(((total.approved) / (totalSum - total.pending - total.cancelled || 1)) * 100) : 0;
+
+      let html = `
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-card-label">Total Requests</div>
+            <div class="stat-card-value">${totalSum}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Pending Approval</div>
+            <div class="stat-card-value">${total.pending}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Approved</div>
+            <div class="stat-card-value">${total.approved}</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Approval Rate</div>
+            <div class="stat-card-value">${completionRate}%</div>
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <div class="chart-title">Request Type Distribution</div>`;
+
+      const typeLabels = {
+        room_booking: { label: "🏢 Room Booking", cls: "room" },
+        vehicle_booking: { label: "🚗 Vehicle Booking", cls: "vehicle" },
+        maintenance: { label: "🔧 Maintenance", cls: "maint" },
+        other: { label: "📋 Other Requests", cls: "other" }
+      };
+
+      for (const [key, val] of Object.entries(typeLabels)) {
+        const count = types[key] || 0;
+        const pct = totalSum ? Math.round((count / totalSum) * 100) : 0;
+        html += `
+          <div class="chart-bar-row">
+            <div class="chart-bar-header">
+              <span>${val.label}</span>
+              <span>${count} (${pct}%)</span>
+            </div>
+            <div class="chart-bar-bg">
+              <div class="chart-bar-fill chart-bar-${val.cls}" style="width: ${pct}%"></div>
+            </div>
+          </div>`;
+      }
+
+      html += `
+        </div>
+
+        <div class="chart-container">
+          <div class="chart-title">Monthly Trends (Last 6 Months)</div>
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--slate-200); text-align: left; color: var(--slate-400);">
+                <th style="padding: 8px 4px;">Month</th>
+                <th style="padding: 8px 4px; text-align: right;">Total</th>
+                <th style="padding: 8px 4px; text-align: right;">Approved</th>
+              </tr>
+            </thead>
+            <tbody>`;
+
+      if (!monthly.length) {
+        html += `<tr><td colspan="3" style="text-align: center; padding: 12px; color: var(--slate-400);">No monthly data yet.</td></tr>`;
+      } else {
+        html += monthly.map(m => `
+          <tr style="border-bottom: 1px solid var(--slate-100);">
+            <td style="padding: 8px 4px; font-weight: 600; color: var(--slate-700);">${m.month}</td>
+            <td style="padding: 8px 4px; text-align: right; color: var(--slate-600);">${m.total}</td>
+            <td style="padding: 8px 4px; text-align: right; color: var(--green); font-weight: 600;">${m.approved}</td>
+          </tr>`).join("");
+      }
+
+      html += `
+            </tbody>
+          </table>
+        </div>`;
+
+      container.innerHTML = html;
+    } catch (e) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">⚠️</div>
+          <h3>Failed to load statistics</h3>
+          <p>${escHtml(e.message)}</p>
+          <button class="btn-retry" onclick="loadAdminReports()">↻ Retry</button>
+        </div>`;
+    }
+  }
+
+  async function renderAdminResources() {
+    const app = document.getElementById("app");
+    removeFab();
+    app.className = "page pb-fab";
+    app.innerHTML = `
+      ${renderAdminHeaderTabs()}
+      <div id="resources-container">
+        <div class="loader"><div class="spinner"></div><p class="loader-text">Loading resources…</p></div>
+      </div>`;
+    
+    if (!document.getElementById("fab")) {
+      const fab = document.createElement("button");
+      fab.id = "fab";
+      fab.className = "fab";
+      fab.innerHTML = `<span>＋</span> Add Resource`;
+      fab.onclick = openNewResourceSheet;
+      document.body.appendChild(fab);
+    }
+    
+    await loadAdminResources();
+  }
+
+  async function loadAdminResources() {
+    const container = document.getElementById("resources-container");
+    if (!container) return;
+    try {
+      const list = await apiGet("/admin/resources");
+      if (!list.length) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">🏢</div>
+            <h3>No resources registered</h3>
+            <p>Tap the button below to add your first resource.</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="section-hd"><h2>Registered Resources</h2><span class="count-chip">${list.length}</span></div>
+        <div class="resource-list">
+          ${list.map(r => `
+            <div class="resource-card">
+              <div class="resource-info">
+                <span class="resource-name">${escHtml(r.name)}</span>
+                <span class="resource-desc">${r.description ? escHtml(r.description) : "No description"} · <span style="font-weight:600; text-transform:capitalize;">${r.type.replace('_',' ')}</span></span>
+              </div>
+              <div class="resource-actions">
+                <span class="badge badge-${r.is_active ? 'approved' : 'rejected'}" style="margin:0;">${r.is_active ? 'Active' : 'Inactive'}</span>
+                <button class="btn btn-ghost btn-sm" onclick="openEditResourceSheet('${r.id}', '${escHtml(r.name).replace(/'/g, "\\'")}', '${escHtml(r.description || '').replace(/'/g, "\\'")}', ${r.is_active})" style="width:auto; margin:0; padding:6px 12px; font-size:12px;">Edit</button>
+              </div>
+            </div>`).join("")}
+        </div>`;
+    } catch {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">⚠️</div>
+          <h3>Failed to load resources</h3>
+          <button class="btn-retry" onclick="loadAdminResources()">↻ Retry</button>
+        </div>`;
+    }
+  }
+
+  function showFormSheet(title, htmlContent, actionLabel, onAction) {
+    const overlay = document.createElement("div");
+    overlay.className = "sheet-overlay";
+    overlay.id = "form-overlay";
+    overlay.innerHTML = `
+      <div class="sheet" style="padding-bottom: 24px;">
+        <div class="sheet-handle"></div>
+        <div class="sheet-title">${escHtml(title)}</div>
+        <div style="margin-bottom: 20px;">${htmlContent}</div>
+        <button class="btn btn-primary" id="sheet-action">${escHtml(actionLabel)}</button>
+        <button class="btn btn-ghost" id="sheet-cancel" style="margin-top:8px">Cancel</button>
+      </div>`;
+    document.body.appendChild(overlay);
+    
+    document.getElementById("sheet-action").onclick = () => {
+      onAction(() => overlay.remove());
+    };
+    
+    const closeBtn = document.getElementById("sheet-cancel");
+    const closeSheet = () => overlay.remove();
+    closeBtn.onclick = closeSheet;
+    overlay.onclick = (e) => { if (e.target === overlay) closeSheet(); };
+  }
+
+  function openNewResourceSheet() {
+    showFormSheet(
+      "Add New Resource",
+      `
+      <div style="text-align:left; width:100%; margin-top:10px;">
+        <div class="form-group">
+          <label class="form-label" for="res-name">Resource Name <span class="req">*</span></label>
+          <input class="form-control" id="res-name" placeholder="e.g. Conference Room A" style="border: 1.5px solid var(--slate-200); border-radius: 10px; padding: 10px;" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Type <span class="req">*</span></label>
+          <select id="res-type" class="form-control" style="border: 1.5px solid var(--slate-200); border-radius: 10px; padding: 10px; height: auto;">
+            <option value="room">🏢 Room</option>
+            <option value="vehicle">🚗 Vehicle</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="res-desc">Description</label>
+          <textarea class="form-control" id="res-desc" placeholder="Details or amenities…" style="border: 1.5px solid var(--slate-200); border-radius: 10px; padding: 10px;"></textarea>
+        </div>
+      </div>`,
+      "Save Resource",
+      async (close) => {
+        const name = document.getElementById("res-name")?.value?.trim();
+        const type = document.getElementById("res-type")?.value;
+        const desc = document.getElementById("res-desc")?.value?.trim();
+        if (!name) {
+          showToast("Name is required");
+          return;
+        }
+        showToast("Saving…");
+        try {
+          await apiPost("/admin/resources", { name, type, description: desc || null });
+          showToast("✓ Resource added successfully!");
+          close();
+          loadAdminResources();
+        } catch {
+          showToast("Failed to add resource");
+        }
+      }
+    );
+  }
+
+  function openEditResourceSheet(id, currentName, currentDesc, isActive) {
+    showFormSheet(
+      "Edit Resource",
+      `
+      <div style="text-align:left; width:100%; margin-top:10px;">
+        <div class="form-group">
+          <label class="form-label" for="edit-res-name">Resource Name <span class="req">*</span></label>
+          <input class="form-control" id="edit-res-name" value="${currentName}" style="border: 1.5px solid var(--slate-200); border-radius: 10px; padding: 10px;" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit-res-desc">Description</label>
+          <textarea class="form-control" id="edit-res-desc" style="border: 1.5px solid var(--slate-200); border-radius: 10px; padding: 10px;">${currentDesc}</textarea>
+        </div>
+        <div class="form-group" style="display:flex; align-items:center; gap:8px; margin-top:12px;">
+          <input type="checkbox" id="edit-res-active" ${isActive ? "checked" : ""} style="width:18px; height:18px; cursor:pointer;" />
+          <label for="edit-res-active" style="font-weight:600; cursor:pointer; font-size:13px; color:var(--slate-700);">Active (Available for booking)</label>
+        </div>
+      </div>`,
+      "Update Resource",
+      async (close) => {
+        const name = document.getElementById("edit-res-name")?.value?.trim();
+        const desc = document.getElementById("edit-res-desc")?.value?.trim();
+        const active = document.getElementById("edit-res-active")?.checked;
+        if (!name) {
+          showToast("Name is required");
+          return;
+        }
+        showToast("Updating…");
+        try {
+          await apiPatch(`/admin/resources/${id}`, { name, description: desc || null, is_active: active });
+          showToast("✓ Resource updated!");
+          close();
+          loadAdminResources();
+        } catch {
+          showToast("Failed to update resource");
+        }
+      }
+    );
   }
 
   // Step 9: loadAdminList — sort pending oldest-first (FIFO)
@@ -1364,7 +1708,10 @@
               ✕ Reject
             </button>
           </div>
-        </div>` : ""}`;
+        </div>` : ""}
+
+        <div id="comments-section"></div>`;
+      loadComments(r.id);
     } catch {
       app.innerHTML = `
         <button class="back-btn" onclick="renderAdminDashboard()">‹ Dashboard</button>
@@ -1399,6 +1746,88 @@
       showToast("Action failed — try again");
       if (approveBtn) { approveBtn.disabled = false; approveBtn.innerHTML = "✓ Approve"; }
       if (rejectBtn)  { rejectBtn.disabled  = false; }
+    }
+  }
+
+  // ══════════════════════════ COMMENTS VIEWS ══════════════════════════
+
+  async function loadComments(requestId) {
+    const el = document.getElementById("comments-section");
+    if (!el) return;
+
+    el.innerHTML = `
+      <div class="card" style="margin-top:12px; padding:14px 16px;">
+        <div style="font-size:12px;font-weight:600;color:var(--slate-400);text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">Comments & Discussion</div>
+        <div id="comments-list" style="display:flex; flex-direction:column; gap:10px; max-height:280px; overflow-y:auto; margin-bottom:12px; padding-right:4px;">
+          <div style="text-align:center; padding:12px; font-size:12px; color:var(--slate-400)">Loading comments…</div>
+        </div>
+        <div class="comment-input-row" style="display:flex; gap:8px; align-items:flex-end;">
+          <textarea class="form-control" id="comment-text-inp" rows="1" placeholder="Type a message…" style="margin:0; flex:1; resize:none; font-size:13px; border-radius:10px; border:1.5px solid var(--slate-200); padding:8px 12px;"></textarea>
+          <button class="btn btn-primary" id="comment-send-btn" onclick="postComment('${requestId}')" style="width:auto; height:36px; padding:0 16px; margin:0; display:flex; align-items:center; justify-content:center; border-radius:10px; font-size:13px; font-weight:600;">Send</button>
+        </div>
+      </div>`;
+
+    try {
+      const list = await apiGet(`/requests/${requestId}/comments`);
+      renderCommentsList(list);
+    } catch {
+      const listEl = document.getElementById("comments-list");
+      if (listEl) {
+        listEl.innerHTML = `<div style="text-align:center; padding:12px; font-size:12px; color:var(--red)">Failed to load comments</div>`;
+      }
+    }
+  }
+
+  function renderCommentsList(list) {
+    const listEl = document.getElementById("comments-list");
+    if (!listEl) return;
+    if (!list || !list.length) {
+      listEl.innerHTML = `<div style="text-align:center; padding:16px 12px; font-size:12px; color:var(--slate-400)">No messages yet. Start the conversation!</div>`;
+      return;
+    }
+
+    listEl.innerHTML = list.map(c => {
+      const isSelf = c.user_id === currentUserId;
+      const bubbleClass = isSelf ? "comment-bubble self" : "comment-bubble other";
+      const name = c.full_name ? escHtml(c.full_name) : "User";
+
+      return `
+        <div class="${bubbleClass}" style="align-self: ${isSelf ? 'flex-end' : 'flex-start'}; max-width: 85%; display: flex; flex-direction: column; margin-bottom: 2px;">
+          <div style="font-size: 11px; font-weight: 600; color: var(--slate-500); margin-bottom: 2px; display: flex; gap: 6px; justify-content: ${isSelf ? 'flex-end' : 'flex-start'};">
+            <span>${name}</span>
+            <span style="font-weight: 400; color: var(--slate-400);">${relativeTime(c.created_at)}</span>
+          </div>
+          <div style="background: ${isSelf ? 'var(--green-light)' : 'var(--slate-100)'}; color: var(--slate-800); padding: 8px 12px; border-radius: ${isSelf ? '12px 12px 0 12px' : '12px 12px 12px 0'}; font-size: 13px; line-height: 1.4; word-break: break-word;">
+            ${escHtml(c.content)}
+          </div>
+        </div>`;
+    }).join("");
+
+    listEl.scrollTop = listEl.scrollHeight;
+  }
+
+  async function postComment(requestId) {
+    const inp = document.getElementById("comment-text-inp");
+    const btn = document.getElementById("comment-send-btn");
+    const txt = inp?.value?.trim();
+    if (!txt) return;
+
+    inp.disabled = true;
+    btn.disabled = true;
+    btn.innerHTML = `<div class="spinner spinner-sm" style="border-width:2px; width:12px; height:12px;"></div>`;
+
+    try {
+      await apiPost(`/requests/${requestId}/comments`, { content: txt });
+      inp.value = "";
+      await loadComments(requestId);
+    } catch {
+      showToast("Failed to send comment");
+    } finally {
+      if (inp) inp.disabled = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = "Send";
+      }
     }
   }
 

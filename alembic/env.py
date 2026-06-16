@@ -8,6 +8,7 @@ from app.db.base import Base
 from app.models.user import User
 from app.models.resource import Resource
 from app.models.request import ServiceRequest
+from app.models.comment import RequestComment
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("+asyncpg", ""))

@@ -12,7 +12,10 @@
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [240, 300],
+      "position": [
+        240,
+        300
+      ],
       "webhookId": "48c0cd3b-20d8-43c2-a4dc-e6b5dfd208f9"
     },
     {
@@ -21,12 +24,19 @@
           "values": [
             {
               "conditions": {
-                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
                 "conditions": [
                   {
                     "leftValue": "={{ $json.body.event }}",
                     "rightValue": "request_created",
-                    "operator": { "type": "string", "operation": "equals" }
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
                   }
                 ],
                 "combinator": "and"
@@ -36,12 +46,19 @@
             },
             {
               "conditions": {
-                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
                 "conditions": [
                   {
                     "leftValue": "={{ $json.body.event }}",
                     "rightValue": "status_changed",
-                    "operator": { "type": "string", "operation": "equals" }
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
                   }
                 ],
                 "combinator": "and"
@@ -51,12 +68,19 @@
             },
             {
               "conditions": {
-                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
                 "conditions": [
                   {
                     "leftValue": "={{ $json.body.event }}",
                     "rightValue": "request_cancelled",
-                    "operator": { "type": "string", "operation": "equals" }
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
                   }
                 ],
                 "combinator": "and"
@@ -72,7 +96,10 @@
       "name": "Switch on event",
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3,
-      "position": [460, 300]
+      "position": [
+        460,
+        300
+      ]
     },
     {
       "parameters": {
@@ -91,13 +118,16 @@
         },
         "sendBody": true,
         "contentType": "json",
-        "body": "={\n  \"to\": \"Ub5d366082158f0fe3cde3d824e0ea449\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"📋 New request created\\nRequest ID: {{ $json.body.request_id }}\\nTitle: {{ $json.body.title }}\\nUser: {{ $json.body.user_name }} ({{ $json.body.user_email }})\"\n    }\n  ]\n}"
+        "body": "={\n  \"to\": \"Ub5d366082158f0fe3cde3d824e0ea449\",\n  \"messages\": [\n    {\n      \"type\": \"flex\",\n      \"altText\": \"📋 New request created\",\n      \"contents\": {\n        \"type\": \"bubble\",\n        \"size\": \"mega\",\n        \"header\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"backgroundColor\": \"#06C755\",\n          \"paddingAll\": \"16px\",\n          \"contents\": [\n            {\n              \"type\": \"text\",\n              \"text\": \"⚡ Service Portal\",\n              \"color\": \"#ffffff\",\n              \"weight\": \"bold\",\n              \"size\": \"sm\"\n            }\n          ]\n        },\n        \"body\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"paddingAll\": \"20px\",\n          \"spacing\": \"md\",\n          \"contents\": [\n            {\n              \"type\": \"text\",\n              \"text\": \"New Request Created\",\n              \"weight\": \"bold\",\n              \"size\": \"xl\",\n              \"color\": \"#1c1917\"\n            },\n            {\n              \"type\": \"box\",\n              \"layout\": \"vertical\",\n              \"spacing\": \"sm\",\n              \"margin\": \"lg\",\n              \"contents\": [\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"horizontal\",\n                  \"contents\": [\n                    {\n                      \"type\": \"text\",\n                      \"text\": \"Title\",\n                      \"color\": \"#78716c\",\n                      \"size\": \"sm\",\n                      \"flex\": 2\n                    },\n                    {\n                      \"type\": \"text\",\n                      \"text\": \"{{ $json.body.title }}\",\n                      \"color\": \"#1c1917\",\n                      \"size\": \"sm\",\n                      \"weight\": \"bold\",\n                      \"wrap\": true,\n                      \"flex\": 5\n                    }\n                  ]\n                },\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"horizontal\",\n                  \"contents\": [\n                    {\n                      \"type\": \"text\",\n                      \"text\": \"User\",\n                      \"color\": \"#78716c\",\n                      \"size\": \"sm\",\n                      \"flex\": 2\n                    },\n                    {\n                      \"type\": \"text\",\n                      \"text\": \"{{ $json.body.user_name }}\",\n                      \"color\": \"#1c1917\",\n                      \"size\": \"sm\",\n                      \"wrap\": true,\n                      \"flex\": 5\n                    }\n                  ]\n                },\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"horizontal\",\n                  \"contents\": [\n                    {\n                      \"type\": \"text\",\n                      \"text\": \"Email\",\n                      \"color\": \"#78716c\",\n                      \"size\": \"sm\",\n                      \"flex\": 2\n                    },\n                    {\n                      \"type\": \"text\",\n                      \"text\": \"{{ $json.body.user_email }}\",\n                      \"color\": \"#1c1917\",\n                      \"size\": \"sm\",\n                      \"wrap\": true,\n                      \"flex\": 5\n                    }\n                  ]\n                },\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"horizontal\",\n                  \"contents\": [\n                    {\n                      \"type\": \"text\",\n                      \"text\": \"ID\",\n                      \"color\": \"#78716c\",\n                      \"size\": \"sm\",\n                      \"flex\": 2\n                    },\n                    {\n                      \"type\": \"text\",\n                      \"text\": \"{{ $json.body.request_id }}\",\n                      \"color\": \"#78716c\",\n                      \"size\": \"xs\",\n                      \"wrap\": true,\n                      \"flex\": 5\n                    }\n                  ]\n                }\n              ]\n            }\n          ]\n        },\n        \"footer\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"paddingAll\": \"16px\",\n          \"contents\": [\n            {\n              \"type\": \"button\",\n              \"action\": {\n                \"type\": \"uri\",\n                \"label\": \"Review Request\",\n                \"uri\": \"https://liff.line.me/2010375597-spCTVMCi\"\n              },\n              \"style\": \"primary\",\n              \"color\": \"#06C755\"\n            }\n          ]\n        }\n      }\n    }\n  ]\n}"
       },
       "id": "line-push-created",
       "name": "LINE push — new request (admin)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [700, 160]
+      "position": [
+        700,
+        160
+      ]
     },
     {
       "parameters": {
@@ -116,19 +146,30 @@
         },
         "sendBody": true,
         "contentType": "json",
-        "body": "={\n  \"to\": \"Ub5d366082158f0fe3cde3d824e0ea449\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"🚫 Request cancelled\\nRequest ID: {{ $json.body.request_id }}\\nUser: {{ $json.body.user_name }} ({{ $json.body.user_email }})\"\n    }\n  ]\n}"
+        "body": "={\n  \"to\": \"Ub5d366082158f0fe3cde3d824e0ea449\",\n  \"messages\": [\n    {\n      \"type\": \"flex\",\n      \"altText\": \"🚫 Request cancelled\",\n      \"contents\": {\n        \"type\": \"bubble\",\n        \"size\": \"mega\",\n        \"header\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"backgroundColor\": \"#EF4444\",\n          \"paddingAll\": \"16px\",\n          \"contents\": [\n            {\n              \"type\": \"text\",\n              \"text\": \"⚡ Service Portal\",\n              \"color\": \"#ffffff\",\n              \"weight\": \"bold\",\n              \"size\": \"sm\"\n            }\n          ]\n        },\n        \"body\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"paddingAll\": \"20px\",\n          \"spacing\": \"md\",\n          \"contents\": [\n            {\n              \"type\": \"text\",\n              \"text\": \"Request Cancelled\",\n              \"weight\": \"bold\",\n              \"size\": \"xl\",\n              \"color\": \"#1c1917\"\n            },\n            {\n              \"type\": \"box\",\n              \"layout\": \"vertical\",\n              \"spacing\": \"sm\",\n              \"margin\": \"lg\",\n              \"contents\": [\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"horizontal\",\n                  \"contents\": [\n                    {\n                      \"type\": \"text\",\n                      \"text\": \"User\",\n                      \"color\": \"#78716c\",\n                      \"size\": \"sm\",\n                      \"flex\": 2\n                    },\n                    {\n                      \"type\": \"text\",\n                      \"text\": \"{{ $json.body.user_name }}\",\n                      \"color\": \"#1c1917\",\n                      \"size\": \"sm\",\n                      \"wrap\": true,\n                      \"flex\": 5\n                    }\n                  ]\n                },\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"horizontal\",\n                  \"contents\": [\n                    {\n                      \"type\": \"text\",\n                      \"text\": \"Email\",\n                      \"color\": \"#78716c\",\n                      \"size\": \"sm\",\n                      \"flex\": 2\n                    },\n                    {\n                      \"type\": \"text\",\n                      \"text\": \"{{ $json.body.user_email }}\",\n                      \"color\": \"#1c1917\",\n                      \"size\": \"sm\",\n                      \"wrap\": true,\n                      \"flex\": 5\n                    }\n                  ]\n                },\n                {\n                  \"type\": \"box\",\n                  \"layout\": \"horizontal\",\n                  \"contents\": [\n                    {\n                      \"type\": \"text\",\n                      \"text\": \"ID\",\n                      \"color\": \"#78716c\",\n                      \"size\": \"sm\",\n                      \"flex\": 2\n                    },\n                    {\n                      \"type\": \"text\",\n                      \"text\": \"{{ $json.body.request_id }}\",\n                      \"color\": \"#78716c\",\n                      \"size\": \"xs\",\n                      \"wrap\": true,\n                      \"flex\": 5\n                    }\n                  ]\n                }\n              ]\n            }\n          ]\n        },\n        \"footer\": {\n          \"type\": \"box\",\n          \"layout\": \"vertical\",\n          \"paddingAll\": \"16px\",\n          \"contents\": [\n            {\n              \"type\": \"button\",\n              \"action\": {\n                \"type\": \"uri\",\n                \"label\": \"Open Portal\",\n                \"uri\": \"https://liff.line.me/2010375597-spCTVMCi\"\n              },\n              \"style\": \"primary\",\n              \"color\": \"#EF4444\"\n            }\n          ]\n        }\n      }\n    }\n  ]\n}"
       },
       "id": "line-push-cancelled",
       "name": "LINE push — cancelled (admin)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [700, 440]
+      "position": [
+        700,
+        440
+      ]
     },
     {
       "parameters": {
         "operation": "append",
-        "documentId": { "value": "YOUR_GOOGLE_SHEET_ID_HERE", "__rl": true, "mode": "id" },
-        "sheetName": { "value": "Sheet1", "__rl": true, "mode": "name" },
+        "documentId": {
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "__rl": true,
+          "mode": "id"
+        },
+        "sheetName": {
+          "value": "Sheet1",
+          "__rl": true,
+          "mode": "name"
+        },
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
@@ -149,13 +190,24 @@
       "name": "Sheets log — created",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
-      "position": [940, 160]
+      "position": [
+        940,
+        160
+      ]
     },
     {
       "parameters": {
         "operation": "append",
-        "documentId": { "value": "YOUR_GOOGLE_SHEET_ID_HERE", "__rl": true, "mode": "id" },
-        "sheetName": { "value": "Sheet1", "__rl": true, "mode": "name" },
+        "documentId": {
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "__rl": true,
+          "mode": "id"
+        },
+        "sheetName": {
+          "value": "Sheet1",
+          "__rl": true,
+          "mode": "name"
+        },
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
@@ -176,13 +228,24 @@
       "name": "Sheets log — status changed",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
-      "position": [700, 300]
+      "position": [
+        700,
+        300
+      ]
     },
     {
       "parameters": {
         "operation": "append",
-        "documentId": { "value": "YOUR_GOOGLE_SHEET_ID_HERE", "__rl": true, "mode": "id" },
-        "sheetName": { "value": "Sheet1", "__rl": true, "mode": "name" },
+        "documentId": {
+          "value": "YOUR_GOOGLE_SHEET_ID_HERE",
+          "__rl": true,
+          "mode": "id"
+        },
+        "sheetName": {
+          "value": "Sheet1",
+          "__rl": true,
+          "mode": "name"
+        },
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
@@ -203,35 +266,76 @@
       "name": "Sheets log — cancelled",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.5,
-      "position": [940, 440]
+      "position": [
+        940,
+        440
+      ]
     }
   ],
   "connections": {
     "Webhook": {
       "main": [
-        [{ "node": "Switch on event", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Switch on event",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Switch on event": {
       "main": [
-        [{ "node": "LINE push — new request (admin)", "type": "main", "index": 0 }],
-        [{ "node": "Sheets log — status changed", "type": "main", "index": 0 }],
-        [{ "node": "LINE push — cancelled (admin)", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "LINE push — new request (admin)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sheets log — status changed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "LINE push — cancelled (admin)",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "LINE push — new request (admin)": {
       "main": [
-        [{ "node": "Sheets log — created", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Sheets log — created",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "LINE push — cancelled (admin)": {
       "main": [
-        [{ "node": "Sheets log — cancelled", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Sheets log — cancelled",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
   "pinData": {},
-  "settings": { "executionOrder": "v1" },
+  "settings": {
+    "executionOrder": "v1"
+  },
   "staticData": null,
   "tags": [],
   "triggerCount": 0,

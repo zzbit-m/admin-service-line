@@ -87,3 +87,76 @@ async def update_resource(db: AsyncSession, resource_id: UUID, name: str | None,
     await db.commit()
     await db.refresh(resource)
     return resource
+
+
+async def get_admin_stats(db: AsyncSession) -> dict:
+    from sqlalchemy import func, literal_column
+
+    # 1. Total requests by status
+    status_res = await db.execute(
+        select(ServiceRequest.status, func.count(ServiceRequest.id)).group_by(ServiceRequest.status)
+    )
+    status_map = {row[0]: row[1] for row in status_res.all()}
+
+    # 2. Request type distribution
+    type_res = await db.execute(
+        select(ServiceRequest.request_type, func.count(ServiceRequest.id)).group_by(ServiceRequest.request_type)
+    )
+    type_map = {row[0] or "other": row[1] for row in type_res.all()}
+
+    # 3. Monthly reports (last 6 months)
+    month_trunc = func.date_trunc(literal_column("'month'"), ServiceRequest.created_at)
+    monthly_res = await db.execute(
+        select(
+            month_trunc.label('month_date'),
+            func.count(ServiceRequest.id).label('total'),
+            func.count(ServiceRequest.id).filter(ServiceRequest.status == 'approved').label('approved')
+        )
+        .group_by(month_trunc)
+        .order_by(month_trunc)
+    )
+    monthly_list = [
+        {
+            "month": row.month_date.strftime('%b %Y') if row.month_date else "Unknown",
+            "total": row.total,
+            "approved": row.approved
+        }
+        for row in monthly_res.all()
+    ][-6:]
+
+    # 4. Weekly reports (last 4 weeks)
+    week_trunc = func.date_trunc(literal_column("'week'"), ServiceRequest.created_at)
+    weekly_res = await db.execute(
+        select(
+            week_trunc.label('week_date'),
+            func.count(ServiceRequest.id).label('total')
+        )
+        .group_by(week_trunc)
+        .order_by(week_trunc)
+    )
+    weekly_list = []
+    for row in weekly_res.all():
+        if row.week_date:
+            isocal = row.week_date.isocalendar()
+            week_str = f"{isocal[0]}-W{isocal[1]:02d}"
+        else:
+            week_str = "Unknown"
+        weekly_list.append({
+            "week": week_str,
+            "total": row.total
+        })
+    weekly_list = weekly_list[-4:]
+
+    return {
+        "total_requests": {
+            "pending": status_map.get("pending", 0),
+            "approved": status_map.get("approved", 0),
+            "rejected": status_map.get("rejected", 0),
+            "cancelled": status_map.get("cancelled", 0),
+        },
+        "type_distribution": type_map,
+        "monthly_reports": monthly_list,
+        "weekly_reports": weekly_list,
+    }
+
+

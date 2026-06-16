@@ -28,3 +28,4 @@ class ServiceRequest(Base):
     user = relationship("User", back_populates="service_requests")
     resource = relationship("Resource", back_populates="service_requests")
     attachments = relationship("Attachment", back_populates="service_request")
+    comments = relationship("RequestComment", back_populates="service_request", cascade="all, delete-orphan", order_by="RequestComment.created_at.asc()")

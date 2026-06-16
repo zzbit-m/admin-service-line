@@ -4,6 +4,7 @@ from uuid import UUID
 import httpx
 
 from fastapi import APIRouter, Depends, Query, Request, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import r
@@ -66,7 +67,7 @@ async def cancel_request(request_id: UUID, db: AsyncSession = Depends(get_db), r
         pass
     try:
         pool = request.app.state.arq_pool
-        await pool.enqueue_job("send_notification", str(sr.user_id), "\U0001f6ab Your request has been cancelled.")
+        await pool.enqueue_job("send_notification", str(sr.user_id), "\U0001f6ab Your request has been cancelled.", str(request_id))
     except Exception:
         pass
     try:
@@ -102,3 +103,75 @@ async def get_request(request_id: UUID, db: AsyncSession = Depends(get_db), curr
     except Exception:
         pass
     return sr
+
+
+# ─── COMMENTS ENDPOINTS ──────────────────────────────────────
+
+from app.schemas.comment import CommentCreate, CommentResponse
+from app.services import comment_service
+from app.models.request import ServiceRequest
+
+
+@router.post("/{request_id}/comments", response_model=CommentResponse, status_code=status.HTTP_201_CREATED)
+async def create_comment(
+    request_id: UUID,
+    body: CommentCreate,
+    request: Request = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    comment = await comment_service.create_comment(
+        db, request_id, current_user.id, current_user.role, body.content
+    )
+
+    # Fetch request owner ID for notification logic
+    req_owner_id = await db.scalar(
+        select(ServiceRequest.user_id).where(ServiceRequest.id == request_id)
+    )
+
+    # 1. Admin comments -> notify User via LINE push message
+    if current_user.role == "admin" and req_owner_id and req_owner_id != current_user.id:
+        try:
+            pool = request.app.state.arq_pool
+            content_preview = comment.content if len(comment.content) <= 60 else f"{comment.content[:57]}..."
+            await pool.enqueue_job(
+                "send_notification",
+                str(req_owner_id),
+                f"💬 New comment from Admin: \"{content_preview}\"",
+                str(request_id),
+            )
+        except Exception:
+            pass
+
+    # 2. User comments -> trigger n8n webhook (fire-and-forget)
+    elif current_user.role != "admin" and req_owner_id:
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    "http://localhost:5678/webhook/48c0cd3b-20d8-43c2-a4dc-e6b5dfd208f9",
+                    json={
+                        "event": "comment_added",
+                        "request_id": str(request_id),
+                        "comment_id": str(comment.id),
+                        "user_id": str(current_user.id),
+                        "user_name": current_user.full_name or current_user.email,
+                        "user_email": current_user.email,
+                        "content": comment.content,
+                    },
+                    timeout=3.0,
+                )
+        except Exception:
+            pass
+
+    return comment
+
+
+@router.get("/{request_id}/comments", response_model=list[CommentResponse])
+async def get_comments(
+    request_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await comment_service.get_comments(
+        db, request_id, current_user.id, current_user.role
+    )
