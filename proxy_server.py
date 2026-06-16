@@ -10,7 +10,7 @@ BACKEND = "http://127.0.0.1:8001"
 class ProxyHandler(http.server.SimpleHTTPRequestHandler):
     def should_proxy(self, path):
         clean_path = path.split("?")[0]
-        prefixes = ["/auth", "/requests", "/admin", "/attachments", "/webhook"]
+        prefixes = ["/auth", "/requests", "/admin", "/attachments", "/webhook", "/resources"]
         return any(clean_path == p or clean_path.startswith(p + "/") for p in prefixes)
 
     def do_GET(self):

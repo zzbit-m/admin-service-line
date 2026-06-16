@@ -94,6 +94,7 @@ python promote_admin.py <email>
 | 7 | LINE push notifications via ARQ on approve/reject/cancel | ✅ Done |
 | 8 | n8n webhooks for request_created and request_cancelled events | ✅ Done |
 | 9 | Full LIFF app rewrite — user + admin views, `request_type` field | ✅ Done |
+| 10 | Comments section, Resource UI, Reports, and Front-End Booking | ✅ Done |
 
 ---
 

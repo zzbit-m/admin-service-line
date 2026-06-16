@@ -500,6 +500,8 @@
   let _flashId     = null;   // Step 10: card flash after submit
   let allUserRequests = [];  // Client-side cache for filtering
   let allAdminRequests = []; // Client-side cache for filtering
+  let allActiveResources = [];
+  let currentBookedSlots = [];
 
   // ─── Helpers ──────────────────────────────────────────────
   function decodeToken(t) {
@@ -1086,71 +1088,112 @@
   }
 
   // Step 5: renderNewRequest — type tile grid + photo upload
-  function renderNewRequest() {
+  async function renderNewRequest() {
     const app = document.getElementById("app");
     removeFab();
     selectedType = null;
     _pendingPhoto = null;
     app.className = "page";
-    app.innerHTML = `
-      <button class="back-btn" onclick="renderUserDashboard()">‹ Back</button>
+    app.innerHTML = `<div class="loader"><div class="spinner"></div><p class="loader-text">Loading request form…</p></div>`;
 
-      <div class="card">
-        <div style="font-size:16px;font-weight:700;color:var(--slate-800);margin-bottom:4px">New Request</div>
-        <p style="font-size:13px;color:var(--slate-400)">What do you need help with?</p>
+    try {
+      allActiveResources = await apiGet("/resources");
 
-        <div class="form-group">
-          <label class="form-label">Request Type</label>
-          <div class="type-grid">
-            ${[
-              { v: "room_booking",    icon: "🏢", label: "Room" },
-              { v: "vehicle_booking", icon: "🚗", label: "Vehicle" },
-              { v: "maintenance",     icon: "🔧", label: "Maintenance" },
-              { v: "other",           icon: "📋", label: "Other" }
-            ].map(t => `
-              <div class="type-tile" data-val="${t.v}" onclick="selectType('${t.v}')">
-                <span class="type-tile-icon">${t.icon}</span>
-                <span class="type-tile-label">${t.label}</span>
-              </div>`).join("")}
+      app.innerHTML = `
+        <button class="back-btn" onclick="renderUserDashboard()">‹ Back</button>
+
+        <div class="card">
+          <div style="font-size:16px;font-weight:700;color:var(--slate-800);margin-bottom:4px">New Request</div>
+          <p style="font-size:13px;color:var(--slate-400)">What do you need help with?</p>
+
+          <div class="form-group">
+            <label class="form-label">Request Type</label>
+            <div class="type-grid">
+              ${[
+                { v: "room_booking",    icon: "🏢", label: "Room" },
+                { v: "vehicle_booking", icon: "🚗", label: "Vehicle" },
+                { v: "maintenance",     icon: "🔧", label: "Maintenance" },
+                { v: "other",           icon: "📋", label: "Other" }
+              ].map(t => `
+                <div class="type-tile" data-val="${t.v}" onclick="selectType('${t.v}')">
+                  <span class="type-tile-icon">${t.icon}</span>
+                  <span class="type-tile-label">${t.label}</span>
+                </div>`).join("")}
+            </div>
           </div>
-        </div>
 
-        <div class="form-group">
-          <label class="form-label" for="req-title">Title <span class="req">*</span></label>
-          <input class="form-control" id="req-title" placeholder="e.g. Meeting Room for Monday standup" />
-          <p class="form-error" id="title-err">Please enter a title</p>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="req-desc">Description</label>
-          <textarea class="form-control" id="req-desc" placeholder="Any extra details…"></textarea>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">Photo (optional)</label>
-          <input type="file" id="photo-input" accept="image/jpeg,image/png,image/gif"
-                 style="display:none" onchange="onPhotoChange(this)" />
-          <div class="photo-upload-area" id="photo-area"
-               onclick="document.getElementById('photo-input').click()">
-            <span class="photo-upload-icon">📷</span>
-            <span class="photo-upload-text" id="photo-label">Tap to add a photo</span>
-            <span class="photo-upload-hint">JPG, PNG, GIF · Max 5MB</span>
-            <img class="photo-preview" id="photo-preview" alt="preview" />
+          <div id="scheduling-section" style="display:none; border-top: 1px dashed var(--slate-200); border-bottom: 1px dashed var(--slate-200); padding: 14px 0; margin-bottom: 16px;">
+            <div class="form-group">
+              <label class="form-label" for="req-resource-id">Select Resource <span class="req">*</span></label>
+              <select class="form-control" id="req-resource-id" style="border: 1.5px solid var(--slate-200); border-radius: 10px; padding: 10px; height: auto;" onchange="onResourceOrDateChange()">
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="req-booking-date">Date <span class="req">*</span></label>
+              <input type="date" class="form-control" id="req-booking-date" style="border: 1.5px solid var(--slate-200); border-radius: 10px; padding: 10px; height: auto;" onchange="onResourceOrDateChange()" />
+            </div>
+            <div style="display:flex; gap:12px; margin-bottom:12px;">
+              <div class="form-group" style="flex:1; margin-bottom:0;">
+                <label class="form-label" for="req-start-time">Start Time <span class="req">*</span></label>
+                <input type="time" class="form-control" id="req-start-time" style="border: 1.5px solid var(--slate-200); border-radius: 10px; padding: 10px; height: auto;" onchange="validateBookingTimes()" />
+              </div>
+              <div class="form-group" style="flex:1; margin-bottom:0;">
+                <label class="form-label" for="req-end-time">End Time <span class="req">*</span></label>
+                <input type="time" class="form-control" id="req-end-time" style="border: 1.5px solid var(--slate-200); border-radius: 10px; padding: 10px; height: auto;" onchange="validateBookingTimes()" />
+              </div>
+            </div>
+            <div id="availability-box" style="margin-top:12px; display:none; background:var(--slate-50); border:1px solid var(--slate-200); border-radius:10px; padding:12px;">
+              <div style="font-size:12px; font-weight:600; color:var(--slate-600); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.4px;">Occupied Time Slots</div>
+              <div id="availability-list" style="font-size:13px; color:var(--slate-800);"></div>
+            </div>
           </div>
-          <button class="photo-clear" id="photo-clear" onclick="clearPhoto()" type="button">
-            ✕ Remove photo
+
+          <div class="form-group">
+            <label class="form-label" for="req-title">Title <span class="req">*</span></label>
+            <input class="form-control" id="req-title" placeholder="e.g. Meeting Room for Monday standup" />
+            <p class="form-error" id="title-err">Please enter a title</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="req-desc">Description</label>
+            <textarea class="form-control" id="req-desc" placeholder="Any extra details…"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Photo (optional)</label>
+            <input type="file" id="photo-input" accept="image/jpeg,image/png,image/gif"
+                   style="display:none" onchange="onPhotoChange(this)" />
+            <div class="photo-upload-area" id="photo-area"
+                 onclick="document.getElementById('photo-input').click()">
+              <span class="photo-upload-icon">📷</span>
+              <span class="photo-upload-text" id="photo-label">Tap to add a photo</span>
+              <span class="photo-upload-hint">JPG, PNG, GIF · Max 5MB</span>
+              <img class="photo-preview" id="photo-preview" alt="preview" />
+            </div>
+            <button class="photo-clear" id="photo-clear" onclick="clearPhoto()" type="button">
+              ✕ Remove photo
+            </button>
+          </div>
+
+          <div class="upload-progress" id="upload-progress"><div class="upload-bar"></div></div>
+
+          <button class="btn btn-primary" id="submit-btn" onclick="submitRequest()" style="margin-top:18px">
+            Submit Request
           </button>
-        </div>
+          <button class="btn btn-ghost" onclick="renderUserDashboard()">Cancel</button>
+        </div>`;
 
-        <div class="upload-progress" id="upload-progress"><div class="upload-bar"></div></div>
-
-        <button class="btn btn-primary" id="submit-btn" onclick="submitRequest()" style="margin-top:18px">
-          Submit Request
-        </button>
-        <button class="btn btn-ghost" onclick="renderUserDashboard()">Cancel</button>
-      </div>`;
-
-    document.getElementById("req-title").focus();
+      document.getElementById("req-title").focus();
+    } catch (e) {
+      app.innerHTML = `
+        <button class="back-btn" onclick="renderUserDashboard()">‹ Back</button>
+        <div class="empty-state">
+          <div class="empty-icon">⚠️</div>
+          <h3>Could not load request form</h3>
+          <p>${escHtml(e.message)}</p>
+          <button class="btn-retry" onclick="renderNewRequest()">↻ Retry</button>
+        </div>`;
+    }
   }
 
   // Step 5: Type tile selection handler
@@ -1159,6 +1202,149 @@
     document.querySelectorAll(".type-tile").forEach(t => {
       t.classList.toggle("selected", t.dataset.val === val);
     });
+
+    const schedSection = document.getElementById("scheduling-section");
+    const resSelect = document.getElementById("req-resource-id");
+    const dateInput = document.getElementById("req-booking-date");
+    const startTimeInput = document.getElementById("req-start-time");
+    const endTimeInput = document.getElementById("req-end-time");
+    const availBox = document.getElementById("availability-box");
+    const submitBtn = document.getElementById("submit-btn");
+
+    if (val === "room_booking" || val === "vehicle_booking") {
+      const targetType = val === "room_booking" ? "room" : "vehicle";
+      const filtered = allActiveResources.filter(r => r.type === targetType);
+
+      if (resSelect) {
+        if (filtered.length === 0) {
+          resSelect.innerHTML = `<option value="">No active ${targetType}s available</option>`;
+        } else {
+          resSelect.innerHTML = `<option value="">-- Select a ${targetType} --</option>` +
+            filtered.map(r => `<option value="${r.id}">${escHtml(r.name)}</option>`).join("");
+        }
+      }
+
+      if (schedSection) schedSection.style.display = "block";
+      if (dateInput) dateInput.value = "";
+      if (startTimeInput) startTimeInput.value = "";
+      if (endTimeInput) endTimeInput.value = "";
+      if (availBox) availBox.style.display = "none";
+      if (submitBtn) submitBtn.disabled = true;
+      currentBookedSlots = [];
+    } else {
+      if (schedSection) schedSection.style.display = "none";
+      if (availBox) availBox.style.display = "none";
+      if (submitBtn) submitBtn.disabled = false;
+      currentBookedSlots = [];
+      const timingErr = document.getElementById("timing-err");
+      if (timingErr) timingErr.remove();
+    }
+  }
+
+  // Scheduling helpers
+  async function onResourceOrDateChange() {
+    const resId = document.getElementById("req-resource-id")?.value;
+    const dateStr = document.getElementById("req-booking-date")?.value;
+    const availBox = document.getElementById("availability-box");
+    const availList = document.getElementById("availability-list");
+
+    if (!resId || !dateStr) {
+      if (availBox) availBox.style.display = "none";
+      currentBookedSlots = [];
+      validateBookingTimes();
+      return;
+    }
+
+    if (availList) {
+      availList.innerHTML = `<div style="color:var(--slate-400); font-size:12px; display:flex; align-items:center; gap:6px;"><div class="spinner spinner-sm" style="border-width:2px; width:12px; height:12px; margin:0;"></div>Checking availability…</div>`;
+    }
+    if (availBox) availBox.style.display = "block";
+
+    try {
+      const slots = await apiGet(`/resources/${resId}/availability?date=${dateStr}`);
+      currentBookedSlots = slots;
+
+      if (availList) {
+        if (!slots.length) {
+          availList.innerHTML = `<span style="color:var(--green); font-weight:600; font-size:13px;">🟢 Available all day</span>`;
+        } else {
+          slots.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+          availList.innerHTML = slots.map(s => {
+            const start = new Date(s.start_time).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+            const end = new Date(s.end_time).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+            return `<div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--slate-100);">
+              <span style="font-weight:600; color:var(--red); font-size:12px;">🔴 Booked</span>
+              <span style="font-family:monospace; font-weight:600; font-size:12px;">${start} - ${end}</span>
+            </div>`;
+          }).join("");
+        }
+      }
+      validateBookingTimes();
+    } catch (e) {
+      if (availList) {
+        availList.innerHTML = `<span style="color:var(--red); font-size:12px;">⚠️ Failed to check availability</span>`;
+      }
+      currentBookedSlots = [];
+      validateBookingTimes();
+    }
+  }
+
+  function validateBookingTimes() {
+    const resId = document.getElementById("req-resource-id")?.value;
+    const dateStr = document.getElementById("req-booking-date")?.value;
+    const startStr = document.getElementById("req-start-time")?.value;
+    const endStr = document.getElementById("req-end-time")?.value;
+    const submitBtn = document.getElementById("submit-btn");
+
+    let errEl = document.getElementById("timing-err");
+    if (errEl) errEl.remove();
+
+    if (selectedType !== "room_booking" && selectedType !== "vehicle_booking") {
+      if (submitBtn) submitBtn.disabled = false;
+      return true;
+    }
+
+    if (!resId || !dateStr || !startStr || !endStr) {
+      if (submitBtn) submitBtn.disabled = true;
+      return false;
+    }
+
+    const startLocal = new Date(`${dateStr}T${startStr}`);
+    const endLocal = new Date(`${dateStr}T${endStr}`);
+
+    if (startLocal >= endLocal) {
+      showTimingError("End time must be after start time");
+      if (submitBtn) submitBtn.disabled = true;
+      return false;
+    }
+
+    for (const slot of currentBookedSlots) {
+      const slotStart = new Date(slot.start_time);
+      const slotEnd = new Date(slot.end_time);
+
+      if (startLocal < slotEnd && endLocal > slotStart) {
+        showTimingError("This time slot overlaps with an existing booking");
+        if (submitBtn) submitBtn.disabled = true;
+        return false;
+      }
+    }
+
+    if (submitBtn) submitBtn.disabled = false;
+    return true;
+  }
+
+  function showTimingError(msg) {
+    let errEl = document.getElementById("timing-err");
+    if (!errEl) {
+      errEl = document.createElement("p");
+      errEl.id = "timing-err";
+      errEl.className = "form-error visible";
+      errEl.style.marginTop = "6px";
+      errEl.style.marginBottom = "0";
+      const sched = document.getElementById("scheduling-section");
+      if (sched) sched.appendChild(errEl);
+    }
+    errEl.textContent = msg;
   }
 
   // Step 10: submitRequest — captures response, triggers flash, uploads photo
@@ -1178,16 +1364,41 @@
     errEl.classList.remove("visible");
     titleEl.classList.remove("error");
 
+    if (selectedType === "room_booking" || selectedType === "vehicle_booking") {
+      if (!validateBookingTimes()) {
+        showToast("Please check booking details");
+        return;
+      }
+    }
+
     const hasPhoto = !!_pendingPhoto;
     btn.innerHTML = `<div class="spinner spinner-sm"></div> Submitting…`;
     btn.disabled = true;
+
+    let resourceId = null;
+    let startTimeIso = null;
+    let endTimeIso = null;
+
+    if (selectedType === "room_booking" || selectedType === "vehicle_booking") {
+      resourceId = document.getElementById("req-resource-id")?.value || null;
+      const dateStr = document.getElementById("req-booking-date")?.value;
+      const startStr = document.getElementById("req-start-time")?.value;
+      const endStr = document.getElementById("req-end-time")?.value;
+
+      if (dateStr && startStr && endStr) {
+        startTimeIso = new Date(`${dateStr}T${startStr}`).toISOString();
+        endTimeIso = new Date(`${dateStr}T${endStr}`).toISOString();
+      }
+    }
 
     try {
       const newReq = await apiPost("/requests", {
         title,
         description: desc || null,
         request_type: selectedType || null,
-        resource_id: null,
+        resource_id: resourceId,
+        start_time: startTimeIso,
+        end_time: endTimeIso,
       });
 
       // Upload photo if one was selected
@@ -1200,7 +1411,7 @@
       selectedType = null;
       showToast(hasPhoto ? "✓ Request + photo submitted!" : "✓ Request submitted!");
       renderUserDashboard();
-    } catch {
+    } catch (e) {
       showToast("Failed to submit — try again");
       btn.innerHTML = "Submit Request";
       btn.disabled = false;

@@ -86,6 +86,12 @@ Full LIFF app rewrite with user + admin views and `request_type` field.
 
 Includes: `request_type` column on `ServiceRequest` model (Enum: room_booking, vehicle_booking, maintenance, other), Alembic migration, schema updates. LIFF app now detects role from JWT and shows user dashboard (my requests, detail, new request with type dropdown, cancel) or admin dashboard (pending/all tabs, approve/reject with admin note). Status badges with proper colors, request type badges, mobile-first design.
 
+## Phase 10 — Complete ✅
+
+Comments section, Resource UI, Reports, and Front-End Booking.
+
+Includes: `RequestComment` database models, migrations, schemas, and endpoints for request discussion. Adds admin Reports / Stats dashboard and Resource management UI. Integrates resource select dropdowns, dates, and times inside user's "New Request" page with dynamic check of occupied slots (`GET /resources/{id}/availability`) and client-side overlapping time-slot conflict validations.
+
 ---
 
 ## Future Ideas
