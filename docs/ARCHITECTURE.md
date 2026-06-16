@@ -79,7 +79,7 @@ Client → HTTP Request → FastAPI Router → Service Layer → SQLAlchemy → 
 
 - On `PATCH /admin/requests/{id}/status`, after the status update succeeds, a fire-and-forget POST is sent to the n8n webhook
 - Payload: `{"request_id": "<uuid>", "status": "approved|rejected", "admin_note": "<string>"}`
-- Target: `http://localhost:5678/webhook-test/<uuid>`
+- Target: `http://localhost:5678/webhook/<uuid>` (production; `/webhook-test/` during development)
 - Failures are silently caught (`try/except`) so a down webhook never blocks the status update
 
 ## Background Worker (ARQ)

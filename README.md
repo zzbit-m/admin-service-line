@@ -23,10 +23,11 @@ uvicorn app.main:app --reload
 ## LINE Login (Dev)
 
 1. Start backend: `uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload`
-2. Expose via ngrok: `ngrok http 8001`
-3. Update LIFF endpoint URL in LINE Console to `https://<ngrok-url>/liff-test.html`
-4. Open `https://<ngrok-url>/liff-test.html` in browser
-5. LINE profile `displayName` is stored in `full_name` column on users table
+2. Expose via cloudflared: `cloudflared tunnel --url http://localhost:8001`
+3. Update LIFF endpoint URL in LINE Console to `https://<tunnel-url>/liff-app.html`
+4. Update Messaging API Webhook URL to `https://<tunnel-url>/webhook/line`
+5. Open `https://<tunnel-url>/liff-app.html` in browser
+6. LINE profile `displayName` is stored in `full_name` column on users table
 
 ## Background Worker (ARQ)
 

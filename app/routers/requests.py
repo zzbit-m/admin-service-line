@@ -1,6 +1,8 @@
 import json
 from uuid import UUID
 
+import httpx
+
 from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,9 +18,25 @@ router = APIRouter(prefix="/requests", tags=["requests"])
 
 @router.post("", response_model=RequestResponse, status_code=status.HTTP_201_CREATED)
 async def create_request(body: RequestCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return await request_service.create_request(
-        db, current_user.id, body.title, body.description, body.resource_id, body.start_time, body.end_time
+    sr = await request_service.create_request(
+        db, current_user.id, body.title, body.description, body.resource_id, body.request_type, body.start_time, body.end_time
     )
+    try:
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                "http://localhost:5678/webhook/48c0cd3b-20d8-43c2-a4dc-e6b5dfd208f9",
+                json={
+                    "event": "request_created",
+                    "request_id": str(sr.id),
+                    "user_id": str(sr.user_id),
+                    "title": sr.title,
+                    "resource_id": str(sr.resource_id) if sr.resource_id else None,
+                },
+                timeout=3.0,
+            )
+    except Exception:
+        pass
+    return sr
 
 
 @router.get("/me", response_model=list[RequestResponse])
@@ -41,6 +59,19 @@ async def cancel_request(request_id: UUID, db: AsyncSession = Depends(get_db), r
     try:
         pool = request.app.state.arq_pool
         await pool.enqueue_job("send_notification", str(sr.user_id), "\U0001f6ab Your request has been cancelled.")
+    except Exception:
+        pass
+    try:
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                "http://localhost:5678/webhook/48c0cd3b-20d8-43c2-a4dc-e6b5dfd208f9",
+                json={
+                    "event": "request_cancelled",
+                    "request_id": str(request_id),
+                    "user_id": str(sr.user_id),
+                },
+                timeout=3.0,
+            )
     except Exception:
         pass
     return sr

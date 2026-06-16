@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from app.core.arq_pool import create_arq_pool
 from app.db.session import engine
-from app.routers import admin, auth, auth_line, requests, attachments, webhook
+from app.routers import admin, auth, auth_line, requests, attachments, resources, webhook
 
 STATIC_DIR = Path(__file__).resolve().parent.parent
 
@@ -35,6 +35,7 @@ app.include_router(admin.router)
 app.include_router(attachments.router)
 app.include_router(auth_line.router)
 app.include_router(webhook.router)
+app.include_router(resources.router)
 
 
 @app.get("/liff-test.html")

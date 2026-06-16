@@ -9,6 +9,7 @@ class RequestCreate(BaseModel):
     resource_id: UUID | None = None
     title: str
     description: str | None = None
+    request_type: str | None = None
     start_time: datetime | None = None
     end_time: datetime | None = None
 
@@ -24,6 +25,7 @@ class RequestResponse(BaseModel):
     resource_id: UUID | None
     title: str
     description: str | None
+    request_type: str | None
     status: str
     admin_note: str | None
     start_time: datetime | None

@@ -29,6 +29,11 @@ async def list_requests(
     return await admin_service.list_all_requests(db, status, skip, limit)
 
 
+@router.get("/requests/{request_id}", response_model=RequestResponse)
+async def get_request(request_id: UUID, db: AsyncSession = Depends(get_db), current_user: User = Depends(require_admin)):
+    return await admin_service.get_request_by_id(db, request_id)
+
+
 @router.patch("/requests/{request_id}/status", response_model=RequestResponse)
 async def update_request_status(request_id: UUID, body: StatusUpdate, db: AsyncSession = Depends(get_db), request: Request = None, current_user: User = Depends(require_admin)):
     result = await admin_service.update_request_status(db, request_id, body.status, body.admin_note)
@@ -39,12 +44,13 @@ async def update_request_status(request_id: UUID, body: StatusUpdate, db: AsyncS
     try:
         async with httpx.AsyncClient() as client:
             await client.post(
-                "http://localhost:5678/webhook-test/48c0cd3b-20d8-43c2-a4dc-e6b5dfd208f9",
-                json={
-                    "request_id": str(request_id),
-                    "status": body.status,
-                    "admin_note": body.admin_note,
-                }
+                "http://localhost:5678/webhook/48c0cd3b-20d8-43c2-a4dc-e6b5dfd208f9",
+                    json={
+                        "event": "status_changed",
+                        "request_id": str(request_id),
+                        "status": body.status,
+                        "admin_note": body.admin_note,
+                    }
             )
     except Exception:
         pass

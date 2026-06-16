@@ -14,6 +14,7 @@ async def create_request(
     title: str,
     description: str | None,
     resource_id: UUID | None,
+    request_type: str | None = None,
     start_time: datetime | None = None,
     end_time: datetime | None = None,
 ) -> ServiceRequest:
@@ -36,6 +37,7 @@ async def create_request(
         user_id=user_id,
         title=title,
         description=description,
+        request_type=request_type,
         resource_id=resource_id,
         start_time=start_time,
         end_time=end_time,

@@ -1,0 +1,240 @@
+{
+  "name": "Admin Service Portal Webhooks",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "48c0cd3b-20d8-43c2-a4dc-e6b5dfd208f9",
+        "responseMode": "onReceived",
+        "responseData": "success"
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "48c0cd3b-20d8-43c2-a4dc-e6b5dfd208f9"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.event }}",
+                    "rightValue": "request_created",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "request_created"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.event }}",
+                    "rightValue": "status_changed",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "status_changed"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.event }}",
+                    "rightValue": "request_cancelled",
+                    "operator": { "type": "string", "operation": "equals" }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "request_cancelled"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "switch-event",
+      "name": "Switch on event",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer XQYif9RZA7Ch0337huXmSYL/MENaZz7CTwIlx35MB8t0n/nIAIvjNb6m1lkHPQyAQeTpzcHlZawjwQWpYPde9+H+znxFNHc44og9PKQ9NOwg9KxIX3LzIonCWlzxEZjpOECiiZgD7pYQc/m0428HqAdB04t89/1O/w1cDnyilFU="
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"to\": \"Ub5d366082158f0fe3cde3d824e0ea449\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"📋 New request created\\nRequest ID: {{ $json.body.request_id }}\\nTitle: {{ $json.body.title }}\\nUser ID: {{ $json.body.user_id }}\"\n    }\n  ]\n}"
+      },
+      "id": "line-push-created",
+      "name": "LINE push — new request (admin)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 160]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.line.me/v2/bot/message/push",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer XQYif9RZA7Ch0337huXmSYL/MENaZz7CTwIlx35MB8t0n/nIAIvjNb6m1lkHPQyAQeTpzcHlZawjwQWpYPde9+H+znxFNHc44og9PKQ9NOwg9KxIX3LzIonCWlzxEZjpOECiiZgD7pYQc/m0428HqAdB04t89/1O/w1cDnyilFU="
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"to\": \"Ub5d366082158f0fe3cde3d824e0ea449\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"🚫 Request cancelled\\nRequest ID: {{ $json.body.request_id }}\\nUser ID: {{ $json.body.user_id }}\"\n    }\n  ]\n}"
+      },
+      "id": "line-push-cancelled",
+      "name": "LINE push — cancelled (admin)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [700, 440]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "value": "YOUR_GOOGLE_SHEET_ID_HERE", "__rl": true, "mode": "id" },
+        "sheetName": { "value": "Sheet1", "__rl": true, "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "event": "={{ $json.body.event }}",
+            "request_id": "={{ $json.body.request_id }}",
+            "user_id": "={{ $json.body.user_id }}",
+            "title": "={{ $json.body.title ?? '' }}",
+            "status": "={{ $json.body.status ?? '' }}",
+            "admin_note": "={{ $json.body.admin_note ?? '' }}",
+            "timestamp": "={{ $now }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "sheets-created",
+      "name": "Sheets log — created",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [940, 160]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "value": "YOUR_GOOGLE_SHEET_ID_HERE", "__rl": true, "mode": "id" },
+        "sheetName": { "value": "Sheet1", "__rl": true, "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "event": "={{ $json.body.event }}",
+            "request_id": "={{ $json.body.request_id }}",
+            "user_id": "={{ $json.body.user_id }}",
+            "title": "={{ $json.body.title ?? '' }}",
+            "status": "={{ $json.body.status ?? '' }}",
+            "admin_note": "={{ $json.body.admin_note ?? '' }}",
+            "timestamp": "={{ $now }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "sheets-status",
+      "name": "Sheets log — status changed",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": { "value": "YOUR_GOOGLE_SHEET_ID_HERE", "__rl": true, "mode": "id" },
+        "sheetName": { "value": "Sheet1", "__rl": true, "mode": "name" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "event": "={{ $json.body.event }}",
+            "request_id": "={{ $json.body.request_id }}",
+            "user_id": "={{ $json.body.user_id }}",
+            "title": "={{ $json.body.title ?? '' }}",
+            "status": "={{ $json.body.status ?? '' }}",
+            "admin_note": "={{ $json.body.admin_note ?? '' }}",
+            "timestamp": "={{ $now }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "sheets-cancelled",
+      "name": "Sheets log — cancelled",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [940, 440]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [{ "node": "Switch on event", "type": "main", "index": 0 }]
+      ]
+    },
+    "Switch on event": {
+      "main": [
+        [{ "node": "LINE push — new request (admin)", "type": "main", "index": 0 }],
+        [{ "node": "Sheets log — status changed", "type": "main", "index": 0 }],
+        [{ "node": "LINE push — cancelled (admin)", "type": "main", "index": 0 }]
+      ]
+    },
+    "LINE push — new request (admin)": {
+      "main": [
+        [{ "node": "Sheets log — created", "type": "main", "index": 0 }]
+      ]
+    },
+    "LINE push — cancelled (admin)": {
+      "main": [
+        [{ "node": "Sheets log — cancelled", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": { "executionOrder": "v1" },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-06-16T00:00:00.000Z",
+  "versionId": "1"
+}

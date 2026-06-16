@@ -16,6 +16,7 @@ class ServiceRequest(Base):
     resource_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("resources.id"), nullable=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    request_type: Mapped[str | None] = mapped_column(Enum("room_booking", "vehicle_booking", "maintenance", "other", name="request_type_enum"), nullable=True)
     status: Mapped[str] = mapped_column(Enum("pending", "approved", "rejected", "cancelled", name="request_status"), default="pending", nullable=False)
     admin_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     start_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

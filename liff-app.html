@@ -7,34 +7,102 @@
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: sans-serif; background: #f5f5f5; }
-    .header { background: #06C755; color: white; padding: 16px; text-align: center; font-size: 18px; font-weight: bold; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; }
+    .header { background: #06C755; color: white; padding: 16px; text-align: center; font-size: 18px; font-weight: bold; position: sticky; top: 0; z-index: 10; }
     .container { padding: 16px; max-width: 480px; margin: 0 auto; }
     .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
-    .btn { display: block; width: 100%; padding: 12px; background: #06C755; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 8px; }
+    .card p { font-size: 13px; color: #666; margin-top: 6px; line-height: 1.4; }
+    .card strong { font-size: 15px; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; margin-right: 4px; }
+    .badge.pending { background: #fff3cd; color: #856404; }
+    .badge.approved { background: #d4edda; color: #155724; }
+    .badge.rejected { background: #f8d7da; color: #721c24; }
+    .badge.cancelled { background: #e2e3e5; color: #383d41; }
+    .badge.type { background: #e8f4fd; color: #0c5460; }
+    .btn { display: block; width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 8px; text-align: center; }
+    .btn.primary { background: #06C755; color: white; }
+    .btn.danger { background: #dc3545; color: white; }
     .btn.secondary { background: #eee; color: #333; }
-    .status { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; }
-    .status.pending { background: #fff3cd; color: #856404; }
-    .status.approved { background: #d4edda; color: #155724; }
-    .status.rejected { background: #f8d7da; color: #721c24; }
-    input, textarea, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; margin-top: 6px; }
-    label { font-size: 14px; font-weight: bold; color: #555; margin-top: 12px; display: block; }
-    #status-msg { text-align: center; color: gray; padding: 20px; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn.small { display: inline-block; width: auto; padding: 8px 16px; font-size: 13px; }
+    input, textarea, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; margin-top: 4px; font-family: inherit; }
+    label { font-size: 13px; font-weight: bold; color: #555; margin-top: 12px; display: block; }
+    .meta { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 6px; }
+    .meta span { font-size: 11px; color: #999; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+    .tab { flex: 1; padding: 10px; text-align: center; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; background: #eee; color: #666; }
+    .tab.active { background: #06C755; color: white; }
+    .admin-note { background: #fffde7; border-left: 3px solid #f9a825; padding: 10px; border-radius: 6px; margin-top: 8px; font-size: 13px; }
+    .admin-note strong { font-size: 12px; color: #f57f17; }
+    .refresh { float: right; background: none; border: none; color: white; font-size: 20px; cursor: pointer; padding: 0 8px; }
+    .error-msg { color: #dc3545; font-size: 13px; margin-top: 4px; display: none; }
+    .empty { text-align: center; color: #999; padding: 40px 16px; font-size: 15px; }
   </style>
 </head>
 <body>
   <div class="header">Admin Service Portal</div>
   <div class="container" id="app">
-    <div id="status-msg">Loading...</div>
+    <div class="empty">Loading...</div>
   </div>
 
   <script>
-    const LIFF_ID = "2010375597-BkOzSfco";
-    const API_BASE = "http://localhost:8001";
+    const LIFF_ID = "2010375597-spCTVMCi";
+    const API_BASE = "";
     let accessToken = null;
+    let userRole = null;
 
-    const params = new URLSearchParams(window.location.search);
-    const page = params.get("page") || "requests";
+    function decodeToken(token) {
+      try { return JSON.parse(atob(token.split(".")[1])); } catch(e) { return {}; }
+    }
+
+    function statusBadge(s) {
+      return `<span class="badge ${s}">${s.charAt(0).toUpperCase() + s.slice(1)}</span>`;
+    }
+
+    function typeBadge(t) {
+      if (!t) return "";
+      const labels = { room_booking: "Room", vehicle_booking: "Vehicle", maintenance: "Maintenance", other: "Other" };
+      return `<span class="badge type">${labels[t] || t}</span>`;
+    }
+
+    function shortId(id) {
+      return id ? id.slice(-8) : "";
+    }
+
+    function formatDate(d) {
+      if (!d) return "";
+      return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    }
+
+    async function apiGet(path) {
+      const res = await fetch(`${API_BASE}${path}`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+
+    async function apiPost(path, body) {
+      const res = await fetch(`${API_BASE}${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+
+    async function apiPatch(path, body) {
+      const res = await fetch(`${API_BASE}${path}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+
+    // ─────────────────────────── INIT ───────────────────────────
 
     async function init() {
       await liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true });
@@ -48,88 +116,217 @@
       });
       const data = await res.json();
       accessToken = data.access_token;
+      const payload = decodeToken(accessToken);
+      userRole = payload.role || "user";
 
-      if (page === "new") renderNewRequest();
-      else if (page === "profile") renderProfile();
-      else renderRequests();
+      if (userRole === "admin") {
+        renderAdminDashboard();
+      } else {
+        renderRequests();
+      }
     }
 
-    async function apiGet(path) {
-      const res = await fetch(`${API_BASE}${path}`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
-      return res.json();
-    }
-
-    async function apiPost(path, body) {
-      const res = await fetch(`${API_BASE}${path}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify(body)
-      });
-      return res.json();
-    }
+    // ══════════════════════════ USER VIEWS ══════════════════════════
 
     async function renderRequests() {
       const app = document.getElementById("app");
-      app.innerHTML = "<div id='status-msg'>Loading requests...</div>";
+      app.innerHTML = "<div class='empty'>Loading requests...</div>";
       try {
         const data = await apiGet("/requests/me");
-        const requests = data.requests || data;
-        if (!requests.length) {
+        const list = data.requests || data;
+        if (!list.length) {
           app.innerHTML = `
-            <div class="card"><p style="text-align:center;color:gray">No requests yet</p></div>
-            <button class="btn" onclick="renderNewRequest()">➕ New Request</button>`;
+            <div class="empty">No requests yet 📋</div>
+            <button class="btn primary" onclick="renderNewRequest()">➕ New Request</button>`;
           return;
         }
-        app.innerHTML = requests.map(r => `
-          <div class="card">
-            <strong>${r.title}</strong>
-            <span class="status ${r.status}" style="float:right">${r.status}</span>
-            <p style="font-size:13px;color:#666;margin-top:6px">${r.description || ""}</p>
+        app.innerHTML = list.map(r => `
+          <div class="card" onclick="renderRequestDetail('${r.id}')" style="cursor:pointer">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <strong>${r.title}</strong>
+              ${statusBadge(r.status)}
+            </div>
+            <div class="meta">
+              ${typeBadge(r.request_type)}
+              <span>${formatDate(r.created_at)}</span>
+            </div>
+            <p>${r.description || ""}</p>
           </div>`).join("") +
-          `<button class="btn" onclick="renderNewRequest()">➕ New Request</button>`;
+          `<button class="btn primary" onclick="renderNewRequest()">➕ New Request</button>`;
       } catch(e) {
-        app.innerHTML = "<div class='card'>Failed to load requests.</div>";
+        app.innerHTML = `<div class="card">Failed to load requests.</div>`;
+      }
+    }
+
+    async function renderRequestDetail(id) {
+      const app = document.getElementById("app");
+      app.innerHTML = "<div class='empty'>Loading...</div>";
+      try {
+        const r = await apiGet(`/requests/${id}`);
+        app.innerHTML = `
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <strong style="font-size:16px">${r.title}</strong>
+              ${statusBadge(r.status)}
+            </div>
+            <div class="meta">${typeBadge(r.request_type)} <span>${formatDate(r.created_at)}</span></div>
+            ${r.description ? `<p style="margin-top:10px">${r.description}</p>` : ""}
+            ${r.admin_note ? `<div class="admin-note"><strong>Admin note</strong><br>${r.admin_note}</div>` : ""}
+          </div>
+          ${r.status === "pending" ? `<button class="btn danger" onclick="cancelRequest('${r.id}')">Cancel Request</button>` : ""}
+          <button class="btn secondary" onclick="renderRequests()">← Back</button>`;
+      } catch(e) {
+        app.innerHTML = `<div class="card">Failed to load request.</div><button class="btn secondary" onclick="renderRequests()">← Back</button>`;
+      }
+    }
+
+    async function cancelRequest(id) {
+      const btn = document.querySelector(".btn.danger");
+      btn.textContent = "Cancelling..."; btn.disabled = true;
+      try {
+        await apiPatch(`/requests/${id}/cancel`, {});
+        renderRequests();
+      } catch(e) {
+        alert("Failed to cancel request.");
+        btn.textContent = "Cancel Request"; btn.disabled = false;
       }
     }
 
     async function renderNewRequest() {
-      const resources = await apiGet("/admin/resources");
-      const opts = (resources.resources || resources).map(r =>
-        `<option value="${r.id}">${r.name}</option>`).join("");
-      document.getElementById("app").innerHTML = `
+      const app = document.getElementById("app");
+      app.innerHTML = `
         <div class="card">
           <h3 style="margin-bottom:12px">New Request</h3>
-          <label>Title</label>
+          <label>Title *</label>
           <input id="title" placeholder="Enter title" />
+          <div class="error-msg" id="title-error">Title is required</div>
+          <label>Request Type *</label>
+          <select id="request-type">
+            <option value="">Select type...</option>
+            <option value="room_booking">Room Booking</option>
+            <option value="vehicle_booking">Vehicle Booking</option>
+            <option value="maintenance">Maintenance</option>
+            <option value="other">Other</option>
+          </select>
           <label>Description</label>
           <textarea id="desc" rows="3" placeholder="Enter description"></textarea>
-          <label>Resource</label>
-          <select id="resource"><option value="">None</option>${opts}</select>
-          <button class="btn" onclick="submitRequest()">Submit</button>
+          <button class="btn primary" id="submit-btn" onclick="submitRequest()">Submit</button>
           <button class="btn secondary" onclick="renderRequests()">Cancel</button>
         </div>`;
     }
 
     async function submitRequest() {
       const title = document.getElementById("title").value.trim();
+      const requestType = document.getElementById("request-type").value;
       const desc = document.getElementById("desc").value.trim();
-      const resource_id = document.getElementById("resource").value || null;
-      if (!title) { alert("Title is required"); return; }
-      await apiPost("/requests", { title, description: desc, resource_id });
-      renderRequests();
+      const errEl = document.getElementById("title-error");
+      const btn = document.getElementById("submit-btn");
+
+      if (!title) { errEl.style.display = "block"; return; }
+      errEl.style.display = "none";
+      btn.textContent = "Submitting..."; btn.disabled = true;
+
+      try {
+        await apiPost("/requests", { title, description: desc, request_type: requestType || null, resource_id: null });
+        renderRequests();
+      } catch(e) {
+        alert("Failed to create request.");
+        btn.textContent = "Submit"; btn.disabled = false;
+      }
     }
 
-    async function renderProfile() {
-      const profile = await liff.getProfile();
-      document.getElementById("app").innerHTML = `
-        <div class="card" style="text-align:center">
-          <img src="${profile.pictureUrl}" style="width:80px;height:80px;border-radius:50%;margin-bottom:12px" />
-          <h3>${profile.displayName}</h3>
-          <p style="color:gray;font-size:13px">${profile.statusMessage || ""}</p>
+    // ══════════════════════════ ADMIN VIEWS ══════════════════════════
+
+    let adminFilter = "pending";
+
+    async function renderAdminDashboard() {
+      const app = document.getElementById("app");
+      app.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div class="tabs" style="flex:1;margin-bottom:0">
+            <div class="tab ${adminFilter === "pending" ? "active" : ""}" onclick="switchAdminTab('pending')">Pending</div>
+            <div class="tab ${adminFilter === "all" ? "active" : ""}" onclick="switchAdminTab('all')">All</div>
+          </div>
+          <button class="btn small primary" onclick="renderAdminDashboard()" style="margin:0 0 0 8px;width:auto">↻</button>
         </div>
-        <button class="btn secondary" onclick="renderRequests()">← Back</button>`;
+        <div id="admin-list"><div class="empty">Loading...</div></div>`;
+      await loadAdminList();
+    }
+
+    function switchAdminTab(tab) {
+      adminFilter = tab;
+      renderAdminDashboard();
+    }
+
+    async function loadAdminList() {
+      const el = document.getElementById("admin-list");
+      try {
+        const query = adminFilter === "pending" ? "?status=pending" : "";
+        const data = await apiGet(`/admin/requests${query}`);
+        const list = data.requests || data;
+        if (!list.length) {
+          el.innerHTML = "<div class='empty'>No requests found</div>";
+          return;
+        }
+        el.innerHTML = list.map(r => `
+          <div class="card" onclick="renderAdminRequestDetail('${r.id}')" style="cursor:pointer">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <strong>${r.title}</strong>
+              ${statusBadge(r.status)}
+            </div>
+            <div class="meta">
+              ${typeBadge(r.request_type)}
+              <span>${shortId(r.user_id)}</span>
+              <span>${formatDate(r.created_at)}</span>
+            </div>
+          </div>`).join("");
+      } catch(e) {
+        el.innerHTML = "<div class='card'>Failed to load requests.</div>";
+      }
+    }
+
+    async function renderAdminRequestDetail(id) {
+      const app = document.getElementById("app");
+      app.innerHTML = "<div class='empty'>Loading...</div>";
+      try {
+        const r = await apiGet(`/admin/requests/${id}`);
+        app.innerHTML = `
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <strong style="font-size:16px">${r.title}</strong>
+              ${statusBadge(r.status)}
+            </div>
+            <div class="meta">${typeBadge(r.request_type)} <span>User: ${shortId(r.user_id)}</span></div>
+            ${r.description ? `<p style="margin-top:10px">${r.description}</p>` : ""}
+            ${r.admin_note ? `<div class="admin-note"><strong>Admin note</strong><br>${r.admin_note}</div>` : ""}
+          </div>
+          ${r.status === "pending" ? `
+            <div class="card">
+              <label>Admin Note</label>
+              <textarea id="admin-note" rows="2" placeholder="Optional note...">${r.admin_note || ""}</textarea>
+              <button class="btn primary" id="approve-btn" onclick="adminAction('${r.id}','approved')">Approve</button>
+              <button class="btn danger" id="reject-btn" onclick="adminAction('${r.id}','rejected')">Reject</button>
+            </div>` : ""}
+          <button class="btn secondary" onclick="renderAdminDashboard()">← Back</button>`;
+      } catch(e) {
+        app.innerHTML = `<div class="card">Failed to load request.</div><button class="btn secondary" onclick="renderAdminDashboard()">← Back</button>`;
+      }
+    }
+
+    async function adminAction(id, status) {
+      const note = document.getElementById("admin-note")?.value?.trim() || "";
+      const approveBtn = document.getElementById("approve-btn");
+      const rejectBtn = document.getElementById("reject-btn");
+      if (approveBtn) { approveBtn.textContent = "Processing..."; approveBtn.disabled = true; }
+      if (rejectBtn) { rejectBtn.textContent = "Processing..."; rejectBtn.disabled = true; }
+      try {
+        await apiPatch(`/admin/requests/${id}/status`, { status, admin_note: note });
+        renderAdminDashboard();
+      } catch(e) {
+        alert("Action failed.");
+        if (approveBtn) { approveBtn.textContent = "Approve"; approveBtn.disabled = false; }
+        if (rejectBtn) { rejectBtn.textContent = "Reject"; rejectBtn.disabled = false; }
+      }
     }
 
     init();

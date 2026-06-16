@@ -24,6 +24,14 @@ async def list_all_requests(db: AsyncSession, status_filter: str | None = None, 
     return list(result.scalars().all())
 
 
+async def get_request_by_id(db: AsyncSession, request_id: UUID) -> ServiceRequest:
+    result = await db.execute(select(ServiceRequest).where(ServiceRequest.id == request_id))
+    sr = result.scalar_one_or_none()
+    if sr is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found")
+    return sr
+
+
 async def update_request_status(db: AsyncSession, request_id: UUID, new_status: str, admin_note: str | None = None) -> ServiceRequest:
     result = await db.execute(select(ServiceRequest).where(ServiceRequest.id == request_id))
     sr = result.scalar_one_or_none()

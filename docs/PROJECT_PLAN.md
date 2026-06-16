@@ -72,6 +72,22 @@ Includes: `send_notification` implementation queries user's `line_user_id` and s
 
 ---
 
+## Phase 8 — Complete ✅
+
+n8n webhook extended to three event types with `event` discriminator field.
+
+Includes: `"event": "status_changed"` added to existing approve/reject webhook payload. New webhook fire on `POST /requests` (`"event": "request_created"`) and `PATCH /requests/{id}/cancel` (`"event": "request_cancelled"`). All new calls use `timeout=3.0`. Silent failure on all webhook calls. Webhook URL uses `/webhook/` (production) instead of `/webhook-test/` (dev).
+
+---
+
+## Phase 9 — Complete ✅
+
+Full LIFF app rewrite with user + admin views and `request_type` field.
+
+Includes: `request_type` column on `ServiceRequest` model (Enum: room_booking, vehicle_booking, maintenance, other), Alembic migration, schema updates. LIFF app now detects role from JWT and shows user dashboard (my requests, detail, new request with type dropdown, cancel) or admin dashboard (pending/all tabs, approve/reject with admin note). Status badges with proper colors, request type badges, mobile-first design.
+
+---
+
 ## Future Ideas
 
-- n8n webhook for additional event types
+- *(none)*
