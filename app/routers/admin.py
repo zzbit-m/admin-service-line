@@ -3,7 +3,7 @@ from uuid import UUID
 
 import httpx
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import r
@@ -27,12 +27,50 @@ async def get_stats(db: AsyncSession = Depends(get_db), current_user: User = Dep
 @router.get("/requests", response_model=list[RequestResponse])
 async def list_requests(
     status: str | None = Query(None),
+    start_date: str | None = Query(None),
+    end_date: str | None = Query(None),
+    sort_by: str = Query("created_at"),
+    sort_order: str = Query("desc"),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    return await admin_service.list_all_requests(db, status, skip, limit)
+    return await admin_service.list_all_requests(
+        db,
+        status_filter=status,
+        start_date=start_date,
+        end_date=end_date,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        skip=skip,
+        limit=limit,
+    )
+
+
+@router.get("/requests/export")
+async def export_requests(
+    status: str | None = Query(None),
+    start_date: str | None = Query(None),
+    end_date: str | None = Query(None),
+    sort_by: str = Query("created_at"),
+    sort_order: str = Query("desc"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    csv_content = await admin_service.export_requests_csv(
+        db,
+        status_filter=status,
+        start_date=start_date,
+        end_date=end_date,
+        sort_by=sort_by,
+        sort_order=sort_order,
+    )
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=service_requests.csv"},
+    )
 
 
 @router.get("/requests/{request_id}", response_model=RequestResponse)
@@ -42,7 +80,7 @@ async def get_request(request_id: UUID, db: AsyncSession = Depends(get_db), curr
 
 @router.patch("/requests/{request_id}/status", response_model=RequestResponse)
 async def update_request_status(request_id: UUID, body: StatusUpdate, db: AsyncSession = Depends(get_db), request: Request = None, current_user: User = Depends(require_admin)):
-    result = await admin_service.update_request_status(db, request_id, body.status, body.admin_note)
+    result = await admin_service.update_request_status(db, request_id, body.status, current_user.id, body.admin_note)
     try:
         r.delete(f"request:{request_id}")
     except Exception:
@@ -98,13 +136,31 @@ async def list_resources(db: AsyncSession = Depends(get_db), current_user: User 
 
 @router.post("/resources", response_model=ResourceResponse, status_code=201)
 async def create_resource(body: ResourceCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(require_admin)):
-    resource = await admin_service.create_resource(db, body.name, body.type, body.description)
+    resource = await admin_service.create_resource(
+        db, body.name, body.type, body.description, body.capacity, body.location, body.image_url
+    )
     r.delete("resources:all")
     return resource
 
 
 @router.patch("/resources/{resource_id}", response_model=ResourceResponse)
 async def update_resource(resource_id: UUID, body: ResourceUpdate, db: AsyncSession = Depends(get_db), current_user: User = Depends(require_admin)):
-    resource = await admin_service.update_resource(db, resource_id, body.name, body.description, body.is_active)
+    resource = await admin_service.update_resource(
+        db, resource_id, body.name, body.description, body.is_active, body.capacity, body.location, body.image_url
+    )
     r.delete("resources:all")
     return resource
+
+
+
+@router.get("/stats/export")
+async def export_stats(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    csv_content = await admin_service.export_stats_csv(db)
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=admin_stats.csv"},
+    )

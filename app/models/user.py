@@ -20,4 +20,4 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
-    service_requests = relationship("ServiceRequest", back_populates="user")
+    service_requests = relationship("ServiceRequest", back_populates="user", foreign_keys="[ServiceRequest.user_id]")

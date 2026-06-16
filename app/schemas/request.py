@@ -10,6 +10,7 @@ class RequestCreate(BaseModel):
     title: str
     description: str | None = None
     request_type: str | None = None
+    priority: Literal["low", "normal", "urgent"] = "normal"
     start_time: datetime | None = None
     end_time: datetime | None = None
 
@@ -26,12 +27,15 @@ class RequestResponse(BaseModel):
     title: str
     description: str | None
     request_type: str | None
+    priority: str
     status: str
     admin_note: str | None
     is_archived: bool
     full_name: str | None = None
     start_time: datetime | None
     end_time: datetime | None
+    resolved_by: UUID | None = None
+    resolved_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 

@@ -457,6 +457,16 @@
     /* ── Utility ─────────────────────────────────────────────── */
     .pb-fab { padding-bottom: 88px; }
     .mt-12  { margin-top: 12px; }
+
+    .priority-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 600;
+      text-transform: capitalize;
+    }
+    .priority-low    { background: #e2e8f0; color: #475569; }
+    .priority-normal { background: var(--blue-light); color: #1e40af; }
+    .priority-urgent { background: var(--red-light); color: #991b1b; border: 1.5px solid var(--red); animation: pulseUrgent 1.8s infinite; }
+    @keyframes pulseUrgent { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
   </style>
 </head>
 <body>
@@ -988,6 +998,7 @@
           <div class="detail-hero-meta">
             ${statusBadge(r.status)}
             ${typeTag(r.request_type)}
+            <span class="priority-badge priority-${r.priority || 'normal'}" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);">${escHtml(r.priority || 'normal')}</span>
           </div>
         </div>
 
@@ -1157,6 +1168,15 @@
           <div class="form-group">
             <label class="form-label" for="req-desc">Description</label>
             <textarea class="form-control" id="req-desc" placeholder="Any extra details…"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="req-priority">Priority</label>
+            <select class="form-control" id="req-priority" style="border: 1.5px solid var(--slate-200); border-radius: 10px; padding: 10px; height: auto;">
+              <option value="low">Low</option>
+              <option value="normal" selected>Normal</option>
+              <option value="urgent">Urgent</option>
+            </select>
           </div>
 
           <div class="form-group">
@@ -1391,12 +1411,15 @@
       }
     }
 
+    const priority = document.getElementById("req-priority")?.value || "normal";
+
     try {
       const newReq = await apiPost("/requests", {
         title,
         description: desc || null,
         request_type: selectedType || null,
         resource_id: resourceId,
+        priority: priority,
         start_time: startTimeIso,
         end_time: endTimeIso,
       });
@@ -1446,18 +1469,41 @@
       return;
     }
 
-    // Show tabs immediately with search controls and skeleton list
+    // Show tabs immediately with search/date-range controls and skeleton list
+    const defaultSortOrder = adminFilter === "pending" ? "asc" : "desc";
     app.innerHTML = `
       ${renderAdminHeaderTabs()}
-      <div class="search-filter-row" style="margin-bottom:16px; display:flex; gap:8px;">
-        <input type="text" id="admin-search" class="form-control" placeholder="Search title or user..." oninput="filterAdminRequests()" style="margin:0; padding:9px 12px; font-size:13px; border-radius:10px; border:1.5px solid var(--slate-200);">
-        <select id="admin-type-filter" class="form-control" onchange="filterAdminRequests()" style="margin:0; width:120px; padding:9px 12px; font-size:13px; border-radius:10px; border:1.5px solid var(--slate-200);">
-          <option value="">All Types</option>
-          <option value="room_booking">🏢 Room</option>
-          <option value="vehicle_booking">🚗 Vehicle</option>
-          <option value="maintenance">🔧 Maintenance</option>
-          <option value="other">📋 Other</option>
-        </select>
+      <div class="search-filter-row" style="margin-bottom:12px; display:flex; flex-direction:column; gap:8px;">
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="admin-search" class="form-control" placeholder="Search title or user..." oninput="filterAdminRequests()" style="margin:0; padding:9px 12px; font-size:13px; border-radius:10px; border:1.5px solid var(--slate-200); flex:1;">
+          <select id="admin-type-filter" class="form-control" onchange="filterAdminRequests()" style="margin:0; width:120px; padding:9px 12px; font-size:13px; border-radius:10px; border:1.5px solid var(--slate-200);">
+            <option value="">All Types</option>
+            <option value="room_booking">🏢 Room</option>
+            <option value="vehicle_booking">🚗 Vehicle</option>
+            <option value="maintenance">🔧 Maintenance</option>
+            <option value="other">📋 Other</option>
+          </select>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input type="date" id="admin-start-date" class="form-control" onchange="loadAdminList()" style="margin:0; padding:6px 8px; font-size:12px; border-radius:8px; border:1.5px solid var(--slate-200); flex:1;" placeholder="Start Date">
+          <span style="font-size:12px; color:var(--slate-400);">to</span>
+          <input type="date" id="admin-end-date" class="form-control" onchange="loadAdminList()" style="margin:0; padding:6px 8px; font-size:12px; border-radius:8px; border:1.5px solid var(--slate-200); flex:1;" placeholder="End Date">
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; justify-content:space-between;">
+          <div style="display:flex; gap:6px; align-items:center;">
+            <span style="font-size:11px; font-weight:600; color:var(--slate-400); text-transform:uppercase;">Sort:</span>
+            <select id="admin-sort-by" onchange="loadAdminList()" style="padding:4px 8px; font-size:12px; border-radius:6px; border:1.5px solid var(--slate-200); color:var(--slate-600); height:auto; background:white;">
+              <option value="created_at" selected>Submission Date</option>
+              <option value="priority">Priority</option>
+              <option value="title">Title</option>
+            </select>
+            <select id="admin-sort-order" onchange="loadAdminList()" style="padding:4px 8px; font-size:12px; border-radius:6px; border:1.5px solid var(--slate-200); color:var(--slate-600); height:auto; background:white;">
+              <option value="desc" ${defaultSortOrder === "desc" ? "selected" : ""}>Desc</option>
+              <option value="asc" ${defaultSortOrder === "asc" ? "selected" : ""}>Asc</option>
+            </select>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="downloadFilteredRequestsCsv()" style="margin:0; padding:6px 10px; font-size:11px; width:auto; display:flex; align-items:center; gap:4px; height:28px; border-radius:6px;">📥 Export</button>
+        </div>
       </div>
       <div id="admin-list">${skeletonList(4)}</div>`;
 
@@ -1509,7 +1555,34 @@
       const totalSum = total.pending + total.approved + total.rejected + total.cancelled;
       const completionRate = totalSum ? Math.round(((total.approved) / (totalSum - total.pending - total.cancelled || 1)) * 100) : 0;
 
+      const avgHours = stats.avg_response_hours;
+      let avgHoursHtml = '';
+      if (avgHours !== null && avgHours !== undefined) {
+        let avgColor = 'var(--green)';
+        let avgLabel = 'Fast';
+        if (avgHours > 24) {
+          avgColor = 'var(--red)';
+          avgLabel = 'Slow';
+        } else if (avgHours > 2) {
+          avgColor = 'var(--amber)';
+          avgLabel = 'Normal';
+        }
+        avgHoursHtml = `
+          <div class="stat-card" style="grid-column: span 2;">
+            <div class="stat-card-label">Average Response Time</div>
+            <div style="display:flex; align-items:baseline; gap:8px;">
+              <span class="stat-card-value" style="color:${avgColor}">${avgHours} hrs</span>
+              <span class="badge" style="background:${avgColor}22; color:${avgColor}; border:1px solid ${avgColor}44; font-size:10px;">${avgLabel}</span>
+            </div>
+          </div>`;
+      }
+
       let html = `
+        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+          <button class="btn btn-ghost btn-sm" onclick="downloadStatsCsv()" style="margin:0; padding:8px 12px; font-size:12px; flex:1; display:flex; align-items:center; justify-content:center; gap:4px; height:36px; border-radius:10px;">📥 Export Stats CSV</button>
+          <button class="btn btn-ghost btn-sm" onclick="downloadRequestsCsv()" style="margin:0; padding:8px 12px; font-size:12px; flex:1; display:flex; align-items:center; justify-content:center; gap:4px; height:36px; border-radius:10px;">📥 Export Requests CSV</button>
+        </div>
+
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-card-label">Total Requests</div>
@@ -1527,6 +1600,7 @@
             <div class="stat-card-label">Approval Rate</div>
             <div class="stat-card-value">${completionRate}%</div>
           </div>
+          ${avgHoursHtml}
         </div>
 
         <div class="chart-container">
@@ -1564,25 +1638,76 @@
               <tr style="border-bottom: 1px solid var(--slate-200); text-align: left; color: var(--slate-400);">
                 <th style="padding: 8px 4px;">Month</th>
                 <th style="padding: 8px 4px; text-align: right;">Total</th>
-                <th style="padding: 8px 4px; text-align: right;">Approved</th>
+                <th style="padding: 8px 4px; text-align: right; color:#065f46;">Appr</th>
+                <th style="padding: 8px 4px; text-align: right; color:#991b1b;">Rej</th>
+                <th style="padding: 8px 4px; text-align: right; color:var(--slate-500);">Canc</th>
               </tr>
             </thead>
             <tbody>`;
 
       if (!monthly.length) {
-        html += `<tr><td colspan="3" style="text-align: center; padding: 12px; color: var(--slate-400);">No monthly data yet.</td></tr>`;
+        html += `<tr><td colspan="5" style="text-align: center; padding: 12px; color: var(--slate-400);">No monthly data yet.</td></tr>`;
       } else {
         html += monthly.map(m => `
           <tr style="border-bottom: 1px solid var(--slate-100);">
             <td style="padding: 8px 4px; font-weight: 600; color: var(--slate-700);">${m.month}</td>
             <td style="padding: 8px 4px; text-align: right; color: var(--slate-600);">${m.total}</td>
             <td style="padding: 8px 4px; text-align: right; color: var(--green); font-weight: 600;">${m.approved}</td>
+            <td style="padding: 8px 4px; text-align: right; color: var(--red); font-weight: 600;">${m.rejected ?? 0}</td>
+            <td style="padding: 8px 4px; text-align: right; color: var(--slate-500); font-weight: 600;">${m.cancelled ?? 0}</td>
           </tr>`).join("");
       }
 
       html += `
             </tbody>
           </table>
+        </div>
+
+        <div class="chart-container">
+          <div class="chart-title">Weekly Trends (Last 4 Weeks)</div>
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--slate-200); text-align: left; color: var(--slate-400);">
+                <th style="padding: 8px 4px;">Week</th>
+                <th style="padding: 8px 4px; text-align: right;">Total Requests</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(weekly || []).map(w => `
+                <tr style="border-bottom: 1px solid var(--slate-100);">
+                  <td style="padding: 8px 4px; font-weight: 600; color: var(--slate-700);">${w.week}</td>
+                  <td style="padding: 8px 4px; text-align: right; color: var(--slate-600);">${w.total}</td>
+                </tr>
+              `).join("") || '<tr><td colspan="2" style="text-align:center; padding:12px; color:var(--slate-400);">No weekly data yet.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="chart-container">
+          <div class="chart-title">Top Requisitioners</div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            ${(stats.top_users || []).map((u, idx) => `
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; padding:6px 0; border-bottom:1px solid var(--slate-100);">
+                <span style="font-weight:500; color:var(--slate-700);">${idx + 1}. ${escHtml(u.full_name)}</span>
+                <span class="count-chip" style="background:var(--blue-light); color:#1e40af; font-size:11px;">${u.request_count} requests</span>
+              </div>
+            `).join("") || '<div style="text-align:center; color:var(--slate-400); font-size:12px;">No user activity yet.</div>'}
+          </div>
+        </div>
+
+        <div class="chart-container">
+          <div class="chart-title">Resource Utilization</div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            ${(stats.resource_utilization || []).map((ru, idx) => `
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:13px; padding:6px 0; border-bottom:1px solid var(--slate-100);">
+                <div>
+                  <span style="font-weight:600; color:var(--slate-700);">${idx + 1}. ${escHtml(ru.resource_name)}</span>
+                  <span style="font-size:11px; color:var(--slate-400); margin-left:4px; text-transform:capitalize;">(${ru.resource_type})</span>
+                </div>
+                <span class="count-chip" style="background:var(--green-light); color:var(--green-dark); font-size:11px;">${ru.booking_count} bookings</span>
+              </div>
+            `).join("") || '<div style="text-align:center; color:var(--slate-400); font-size:12px;">No bookings yet.</div>'}
+          </div>
         </div>`;
 
       container.innerHTML = html;
@@ -1638,14 +1763,22 @@
         <div class="section-hd"><h2>Registered Resources</h2><span class="count-chip">${list.length}</span></div>
         <div class="resource-list">
           ${list.map(r => `
-            <div class="resource-card">
-              <div class="resource-info">
-                <span class="resource-name">${escHtml(r.name)}</span>
-                <span class="resource-desc">${r.description ? escHtml(r.description) : "No description"} · <span style="font-weight:600; text-transform:capitalize;">${r.type.replace('_',' ')}</span></span>
-              </div>
-              <div class="resource-actions">
-                <span class="badge badge-${r.is_active ? 'approved' : 'rejected'}" style="margin:0;">${r.is_active ? 'Active' : 'Inactive'}</span>
-                <button class="btn btn-ghost btn-sm" onclick="openEditResourceSheet('${r.id}', '${escHtml(r.name).replace(/'/g, "\\'")}', '${escHtml(r.description || '').replace(/'/g, "\\'")}', ${r.is_active})" style="width:auto; margin:0; padding:6px 12px; font-size:12px;">Edit</button>
+            <div class="resource-card" style="display:flex; flex-direction:column; gap:12px; align-items:stretch;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+                ${r.image_url ? `<img src="${escHtml(r.image_url)}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px; border: 1px solid var(--slate-200); margin-top:2px;" onerror="this.style.display='none'" />` : ''}
+                <div class="resource-info" style="flex:1;">
+                  <span class="resource-name">${escHtml(r.name)}</span>
+                  <span class="resource-desc">
+                    ${r.description ? escHtml(r.description) : "No description"}<br/>
+                    <span style="font-weight:600; text-transform:capitalize;">${r.type.replace('_',' ')}</span>
+                    ${r.location ? ` · 📍 ${escHtml(r.location)}` : ''}
+                    ${r.capacity ? ` · 👥 Cap: ${r.capacity}` : ''}
+                  </span>
+                </div>
+                <div class="resource-actions" style="flex-direction:column; align-items:flex-end; gap:6px;">
+                  <span class="badge badge-${r.is_active ? 'approved' : 'rejected'}" style="margin:0;">${r.is_active ? 'Active' : 'Inactive'}</span>
+                  <button class="btn btn-ghost btn-sm" onclick="openEditResourceSheet('${r.id}', '${escHtml(r.name).replace(/'/g, "\\'")}', '${escHtml(r.description || '').replace(/'/g, "\\'")}', ${r.is_active}, ${r.capacity || 'null'}, '${escHtml(r.location || '').replace(/'/g, "\\'")}', '${escHtml(r.image_url || '').replace(/'/g, "\\'")}')" style="width:auto; margin:0; padding:6px 12px; font-size:12px;">Edit</button>
+                </div>
               </div>
             </div>`).join("")}
         </div>`;
@@ -1687,7 +1820,7 @@
     showFormSheet(
       "Add New Resource",
       `
-      <div style="text-align:left; width:100%; margin-top:10px;">
+      <div style="text-align:left; width:100%; margin-top:10px; max-height: 380px; overflow-y: auto; padding-right:4px;">
         <div class="form-group">
           <label class="form-label" for="res-name">Resource Name <span class="req">*</span></label>
           <input class="form-control" id="res-name" placeholder="e.g. Conference Room A" style="border: 1.5px solid var(--slate-200); border-radius: 10px; padding: 10px;" />
@@ -1697,7 +1830,21 @@
           <select id="res-type" class="form-control" style="border: 1.5px solid var(--slate-200); border-radius: 10px; padding: 10px; height: auto;">
             <option value="room">🏢 Room</option>
             <option value="vehicle">🚗 Vehicle</option>
+            <option value="equipment">🛠️ Equipment</option>
+            <option value="other">📦 Other</option>
           </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="res-capacity">Capacity</label>
+          <input type="number" class="form-control" id="res-capacity" placeholder="e.g. 10 (optional)" style="border: 1.5px solid var(--slate-200); border-radius: 10px; padding: 10px;" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="res-location">Location</label>
+          <input class="form-control" id="res-location" placeholder="e.g. 2nd Floor, Building B" style="border: 1.5px solid var(--slate-200); border-radius: 10px; padding: 10px;" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="res-image-url">Image URL</label>
+          <input class="form-control" id="res-image-url" placeholder="https://example.com/image.jpg" style="border: 1.5px solid var(--slate-200); border-radius: 10px; padding: 10px;" />
         </div>
         <div class="form-group">
           <label class="form-label" for="res-desc">Description</label>
@@ -1708,6 +1855,10 @@
       async (close) => {
         const name = document.getElementById("res-name")?.value?.trim();
         const type = document.getElementById("res-type")?.value;
+        const capVal = document.getElementById("res-capacity")?.value;
+        const capacity = capVal ? parseInt(capVal, 10) : null;
+        const location = document.getElementById("res-location")?.value?.trim() || null;
+        const image_url = document.getElementById("res-image-url")?.value?.trim() || null;
         const desc = document.getElementById("res-desc")?.value?.trim();
         if (!name) {
           showToast("Name is required");
@@ -1715,7 +1866,7 @@
         }
         showToast("Saving…");
         try {
-          await apiPost("/admin/resources", { name, type, description: desc || null });
+          await apiPost("/admin/resources", { name, type, description: desc || null, capacity, location, image_url });
           showToast("✓ Resource added successfully!");
           close();
           loadAdminResources();
@@ -1726,14 +1877,26 @@
     );
   }
 
-  function openEditResourceSheet(id, currentName, currentDesc, isActive) {
+  function openEditResourceSheet(id, currentName, currentDesc, isActive, currentCapacity, currentLocation, currentImageUrl) {
     showFormSheet(
       "Edit Resource",
       `
-      <div style="text-align:left; width:100%; margin-top:10px;">
+      <div style="text-align:left; width:100%; margin-top:10px; max-height: 380px; overflow-y: auto; padding-right:4px;">
         <div class="form-group">
           <label class="form-label" for="edit-res-name">Resource Name <span class="req">*</span></label>
           <input class="form-control" id="edit-res-name" value="${currentName}" style="border: 1.5px solid var(--slate-200); border-radius: 10px; padding: 10px;" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit-res-capacity">Capacity</label>
+          <input type="number" class="form-control" id="edit-res-capacity" value="${currentCapacity !== null && currentCapacity !== undefined ? currentCapacity : ''}" placeholder="e.g. 10" style="border: 1.5px solid var(--slate-200); border-radius: 10px; padding: 10px;" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit-res-location">Location</label>
+          <input class="form-control" id="edit-res-location" value="${currentLocation || ''}" placeholder="e.g. Building A" style="border: 1.5px solid var(--slate-200); border-radius: 10px; padding: 10px;" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit-res-image-url">Image URL</label>
+          <input class="form-control" id="edit-res-image-url" value="${currentImageUrl || ''}" placeholder="https://example.com/image.jpg" style="border: 1.5px solid var(--slate-200); border-radius: 10px; padding: 10px;" />
         </div>
         <div class="form-group">
           <label class="form-label" for="edit-res-desc">Description</label>
@@ -1747,6 +1910,10 @@
       "Update Resource",
       async (close) => {
         const name = document.getElementById("edit-res-name")?.value?.trim();
+        const capVal = document.getElementById("edit-res-capacity")?.value;
+        const capacity = capVal ? parseInt(capVal, 10) : null;
+        const location = document.getElementById("edit-res-location")?.value?.trim() || null;
+        const image_url = document.getElementById("edit-res-image-url")?.value?.trim() || null;
         const desc = document.getElementById("edit-res-desc")?.value?.trim();
         const active = document.getElementById("edit-res-active")?.checked;
         if (!name) {
@@ -1755,7 +1922,7 @@
         }
         showToast("Updating…");
         try {
-          await apiPatch(`/admin/resources/${id}`, { name, description: desc || null, is_active: active });
+          await apiPatch(`/admin/resources/${id}`, { name, description: desc || null, is_active: active, capacity, location, image_url });
           showToast("✓ Resource updated!");
           close();
           loadAdminResources();
@@ -1766,19 +1933,92 @@
     );
   }
 
+  async function downloadStatsCsv() {
+    try {
+      const res = await fetch(`${API_BASE}/admin/stats/export`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "admin_stats.csv";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch {
+      showToast("Failed to download stats CSV");
+    }
+  }
+
+  async function downloadRequestsCsv() {
+    try {
+      const res = await fetch(`${API_BASE}/admin/requests/export`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "service_requests.csv";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch {
+      showToast("Failed to download requests CSV");
+    }
+  }
+
+  async function downloadFilteredRequestsCsv() {
+    try {
+      const status = adminFilter !== "all" ? adminFilter : "";
+      const start = document.getElementById("admin-start-date")?.value || "";
+      const end = document.getElementById("admin-end-date")?.value || "";
+      const sortBy = document.getElementById("admin-sort-by")?.value || "created_at";
+      const sortOrder = document.getElementById("admin-sort-order")?.value || "desc";
+      
+      let q = `?sort_by=${sortBy}&sort_order=${sortOrder}`;
+      if (status) q += `&status=${status}`;
+      if (start) q += `&start_date=${start}`;
+      if (end) q += `&end_date=${end}`;
+      
+      const res = await fetch(`${API_BASE}/admin/requests/export${q}`, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `service_requests${status ? '_' + status : ''}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch {
+      showToast("Failed to download requests CSV");
+    }
+  }
+
   // Step 9: loadAdminList — sort pending oldest-first (FIFO)
   async function loadAdminList() {
     const el = document.getElementById("admin-list");
     if (!el) return;
     try {
-      const q    = adminFilter !== "all" ? `?status=${adminFilter}` : "";
+      const status = adminFilter !== "all" ? adminFilter : "";
+      const start = document.getElementById("admin-start-date")?.value || "";
+      const end = document.getElementById("admin-end-date")?.value || "";
+      const sortBy = document.getElementById("admin-sort-by")?.value || "created_at";
+      const sortOrder = document.getElementById("admin-sort-order")?.value || "desc";
+
+      let q = `?sort_by=${sortBy}&sort_order=${sortOrder}&limit=100`;
+      if (status) q += `&status=${status}`;
+      if (start) q += `&start_date=${start}`;
+      if (end) q += `&end_date=${end}`;
+
       const data = await apiGet(`/admin/requests${q}`);
       allAdminRequests = Array.isArray(data) ? data : (data.requests || []);
-
-      // Step 9 — FIFO: oldest pending first
-      if (adminFilter === "pending") {
-        allAdminRequests.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-      }
 
       filterAdminRequests();
     } catch {
@@ -1830,6 +2070,8 @@
   // Step 7: adminCard — data-status border, full name, relativeTime
   function adminCard(r) {
     const name = r.full_name ? escHtml(r.full_name) : shortId(r.user_id);
+    const priLabels = { low: "Low", normal: "Normal", urgent: "Urgent" };
+    const priBadge = `<span class="priority-badge priority-${r.priority || 'normal'}">${priLabels[r.priority || 'normal']}</span>`;
     return `
       <div class="card clickable" data-status="${r.status}" onclick="renderAdminDetail('${r.id}')">
         <div class="card-row">
@@ -1839,6 +2081,7 @@
         <div class="card-meta">
           ${statusBadge(r.status)}
           ${typeTag(r.request_type)}
+          ${priBadge}
           <span class="user-chip">👤 ${name}</span>
           <span class="card-date">${relativeTime(r.created_at)}</span>
         </div>
@@ -1862,6 +2105,7 @@
           <div class="detail-hero-meta">
             ${statusBadge(r.status)}
             ${typeTag(r.request_type)}
+            <span class="priority-badge priority-${r.priority || 'normal'}" style="background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3);">${escHtml(r.priority || 'normal')}</span>
           </div>
         </div>
 

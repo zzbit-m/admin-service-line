@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, Text
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -17,15 +17,19 @@ class ServiceRequest(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     request_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    priority: Mapped[str] = mapped_column(Enum("low", "normal", "urgent", name="request_priority"), default="normal", server_default="normal", nullable=False)
     status: Mapped[str] = mapped_column(Enum("pending", "approved", "rejected", "cancelled", name="request_status"), default="pending", nullable=False)
     admin_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
     start_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     end_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    resolved_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
 
-    user = relationship("User", back_populates="service_requests")
+    user = relationship("User", back_populates="service_requests", foreign_keys=[user_id])
+    resolver = relationship("User", foreign_keys=[resolved_by])
     resource = relationship("Resource", back_populates="service_requests")
     attachments = relationship("Attachment", back_populates="service_request")
     comments = relationship("RequestComment", back_populates="service_request", cascade="all, delete-orphan", order_by="RequestComment.created_at.asc()")
