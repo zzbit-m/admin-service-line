@@ -42,89 +42,56 @@ async def line_webhook(request: Request):
             if text in ["hi", "hello", "menu", "help", "สวัสดี", "เมนู"]:
                 await send_reply(reply_token, [
                     {
-                        "type": "text",
-                        "text": "Hello! Welcome to the Service Portal. Please choose an action below to get started: 😊"
-                    },
-                    {
                         "type": "flex",
-                        "altText": "⚡ Service Portal Menu",
+                        "altText": "⚡ Booking & Requests Menu",
                         "contents": {
                             "type": "bubble",
                             "size": "mega",
-                            "body": {
+                            "header": {
                                 "type": "box",
                                 "layout": "vertical",
-                                "paddingAll": "24px",
-                                "spacing": "lg",
+                                "background": {
+                                    "type": "linearGradient",
+                                    "angle": "135deg",
+                                    "startColor": "#06C755",
+                                    "endColor": "#05A847"
+                                },
+                                "paddingAll": "20px",
                                 "contents": [
                                     {
-                                        "type": "box",
-                                        "layout": "horizontal",
-                                        "contents": [
-                                            {
-                                                "type": "text",
-                                                "text": "⚡ Service Portal",
-                                                "weight": "bold",
-                                                "size": "xl",
-                                                "color": "#111827",
-                                                "flex": 1
-                                            }
-                                        ]
+                                        "type": "text",
+                                        "text": "Booking & Requests",
+                                        "weight": "bold",
+                                        "color": "#ffffff",
+                                        "size": "xl"
                                     },
                                     {
                                         "type": "text",
-                                        "text": "Manage bookings, view requests, and update your profile directly from LINE.",
+                                        "text": "Service Portal",
+                                        "color": "#E8FAF0",
                                         "size": "xs",
-                                        "color": "#6B7280",
-                                        "wrap": True
+                                        "margin": "xs"
+                                    }
+                                ]
+                            },
+                            "body": {
+                                "type": "box",
+                                "layout": "vertical",
+                                "paddingAll": "20px",
+                                "spacing": "md",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "Select an action below to get started: 👇",
+                                        "weight": "bold",
+                                        "size": "sm",
+                                        "color": "#1E2937"
                                     },
                                     {
                                         "type": "box",
                                         "layout": "vertical",
-                                        "spacing": "md",
+                                        "spacing": "sm",
                                         "contents": [
-                                            {
-                                                "type": "box",
-                                                "layout": "horizontal",
-                                                "backgroundColor": "#F3F4F6",
-                                                "paddingAll": "12px",
-                                                "cornerRadius": "md",
-                                                "action": {
-                                                    "type": "uri",
-                                                    "label": "My Requests",
-                                                    "uri": f"{LIFF_URL}?page=requests"
-                                                },
-                                                "alignItems": "center",
-                                                "contents": [
-                                                    {
-                                                        "type": "text",
-                                                        "text": "📋",
-                                                        "size": "lg",
-                                                        "flex": 0,
-                                                        "margin": "none"
-                                                    },
-                                                    {
-                                                        "type": "box",
-                                                        "layout": "vertical",
-                                                        "margin": "md",
-                                                        "contents": [
-                                                            {
-                                                                "type": "text",
-                                                                "text": "My Requests",
-                                                                "weight": "bold",
-                                                                "size": "sm",
-                                                                "color": "#1F2937"
-                                                            },
-                                                            {
-                                                                "type": "text",
-                                                                "text": "View and track active requests",
-                                                                "size": "xxs",
-                                                                "color": "#4B5563"
-                                                            }
-                                                        ]
-                                                    }
-                                                ]
-                                            },
                                             {
                                                 "type": "box",
                                                 "layout": "horizontal",
@@ -170,7 +137,49 @@ async def line_webhook(request: Request):
                                             {
                                                 "type": "box",
                                                 "layout": "horizontal",
-                                                "backgroundColor": "#F3F4F6",
+                                                "backgroundColor": "#EFF6FF",
+                                                "paddingAll": "12px",
+                                                "cornerRadius": "md",
+                                                "action": {
+                                                    "type": "uri",
+                                                    "label": "My Requests",
+                                                    "uri": f"{LIFF_URL}?page=requests"
+                                                },
+                                                "alignItems": "center",
+                                                "contents": [
+                                                    {
+                                                        "type": "text",
+                                                        "text": "📋",
+                                                        "size": "lg",
+                                                        "flex": 0,
+                                                        "margin": "none"
+                                                    },
+                                                    {
+                                                        "type": "box",
+                                                        "layout": "vertical",
+                                                        "margin": "md",
+                                                        "contents": [
+                                                            {
+                                                                "type": "text",
+                                                                "text": "My Requests",
+                                                                "weight": "bold",
+                                                                "size": "sm",
+                                                                "color": "#1E40AF"
+                                                            },
+                                                            {
+                                                                "type": "text",
+                                                                "text": "View and track active requests",
+                                                                "size": "xxs",
+                                                                "color": "#3B82F6"
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "type": "box",
+                                                "layout": "horizontal",
+                                                "backgroundColor": "#F8FAFC",
                                                 "paddingAll": "12px",
                                                 "cornerRadius": "md",
                                                 "action": {
@@ -197,13 +206,13 @@ async def line_webhook(request: Request):
                                                                 "text": "My Profile",
                                                                 "weight": "bold",
                                                                 "size": "sm",
-                                                                "color": "#1F2937"
+                                                                "color": "#334155"
                                                             },
                                                             {
                                                                 "type": "text",
                                                                 "text": "Manage your profile details",
                                                                 "size": "xxs",
-                                                                "color": "#4B5563"
+                                                                "color": "#64748B"
                                                             }
                                                         ]
                                                     }
