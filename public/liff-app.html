@@ -742,7 +742,7 @@
     }
   }
 
-  async function devLogin(role) {
+  async function devLogin(role, isInitial = false) {
     const creds = DEV_ACCOUNTS[role];
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: "POST",
@@ -761,12 +761,20 @@
       setHeaderActions(`
         <button class="icon-btn" onclick="switchRole()" title="Switch role">⇄</button>
         <button class="icon-btn" onclick="renderAdminDashboard()" title="Refresh">↻</button>`);
-      renderAdminDashboard();
+      if (isInitial) {
+        routePage(userRole);
+      } else {
+        renderAdminDashboard();
+      }
     } else {
       setHeaderActions(`
         <button class="icon-btn" onclick="switchRole()" title="Switch role">⇄</button>
         <button class="icon-btn" onclick="renderUserDashboard()" title="Refresh">↻</button>`);
-      renderUserDashboard();
+      if (isInitial) {
+        routePage(userRole);
+      } else {
+        renderUserDashboard();
+      }
     }
   }
 
@@ -785,12 +793,49 @@
   const apiPost  = (p, b) => api("POST",  p, b);
   const apiPatch = (p, b) => api("PATCH", p, b);
 
+  // ─── ROUTING ──────────────────────────────────────────────
+  function routePage(role) {
+    const pageParam = new URLSearchParams(location.search).get("page");
+    const idParam = new URLSearchParams(location.search).get("id");
+    if (role === "admin") {
+      if (pageParam === "new") {
+        renderNewRequest();
+      } else if (pageParam === "requests") {
+        renderUserDashboard();
+      } else if (pageParam === "admin") {
+        adminFilter = "pending";
+        renderAdminDashboard();
+      } else if (pageParam === "reports") {
+        adminFilter = "reports";
+        renderAdminDashboard();
+      } else if (pageParam === "resources") {
+        adminFilter = "resources";
+        renderAdminDashboard();
+      } else if (pageParam === "detail" && idParam) {
+        renderAdminDetail(idParam);
+      } else {
+        renderAdminDashboard();
+      }
+    } else {
+      // Normal user
+      if (pageParam === "new") {
+        renderNewRequest();
+      } else if (pageParam === "requests") {
+        renderUserDashboard();
+      } else if (pageParam === "detail" && idParam) {
+        renderRequestDetail(idParam);
+      } else {
+        renderUserDashboard();
+      }
+    }
+  }
+
   // ─── INIT ─────────────────────────────────────────────────
   async function init() {
     // ── Dev Switch Mode: skip LIFF, use password login ──────
     if (DEV_MODE) {
       try {
-        await devLogin(_devRole);
+        await devLogin(_devRole, true);
       } catch (e) {
         document.getElementById("app").innerHTML = `
           <div class="empty-state">
@@ -829,11 +874,10 @@
         setHeaderActions(`
           <button class="icon-btn" onclick="switchRole()" title="Switch view">⇄</button>
           <button class="icon-btn" onclick="renderAdminDashboard()" title="Refresh">↻</button>`);
-        renderAdminDashboard();
       } else {
         setHeaderActions(`<button class="icon-btn" onclick="renderUserDashboard()" title="Refresh">↻</button>`);
-        renderUserDashboard();
       }
+      routePage(userRole);
     } catch {
       document.getElementById("app").innerHTML = `
         <div class="empty-state">
