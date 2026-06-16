@@ -1,4 +1,7 @@
 import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import asyncio
 from app.db.session import engine
 from sqlalchemy import text
@@ -18,7 +21,7 @@ async def promote(identifier: str):
             {"val": identifier}
         )
         for r in rows:
-            print(f"  → email={r[0]}  name={r[1]}  line_id={r[2]}  role={r[3]}")
+            print(f"  -> email={r[0]}  name={r[1]}  line_id={r[2]}  role={r[3]}")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

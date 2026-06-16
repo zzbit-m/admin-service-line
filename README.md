@@ -36,6 +36,21 @@ uvicorn app.main:app --reload
 
 ---
 
+## PowerShell Automation (Recommended)
+
+To start the entire application suite (Docker dependencies, database migrations, backend, worker, proxy, and Cloudflare tunnel) automatically in separate windows:
+```powershell
+.\start.ps1
+```
+*Note: The script automatically copies the generated Cloudflare LINE Webhook URL to your clipboard for quick pasting!*
+
+To stop all services and containers cleanly:
+```powershell
+.\stop.ps1
+```
+
+---
+
 ## LINE Login (Dev)
 
 1. Start backend: `uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload`
@@ -55,7 +70,7 @@ Activate it by appending `?dev=1` to the URL:
 http://localhost:8001/liff-app.html?dev=1
 ```
 
-In dev mode, the app skips LIFF init and logs in using pre-seeded test credentials defined in `liff-app.html`. Use the **⇄ Switch** button in the header to toggle between user and admin roles.
+In dev mode, the app skips LIFF init and logs in using pre-seeded test credentials defined in `public/liff-app.html`. Use the **⇄ Switch** button in the header to toggle between user and admin roles.
 
 ---
 
@@ -76,7 +91,7 @@ The worker reads Redis config from `.env` (`REDIS_HOST` / `REDIS_PORT`) and conn
 Grant admin role to an existing user:
 
 ```bash
-python promote_admin.py <email>
+python scripts/promote_admin.py <email>
 ```
 
 ---
@@ -95,6 +110,7 @@ python promote_admin.py <email>
 | 8 | n8n webhooks for request_created and request_cancelled events | ✅ Done |
 | 9 | Full LIFF app rewrite — user + admin views, `request_type` field | ✅ Done |
 | 10 | Comments section, Resource UI, Reports, and Front-End Booking | ✅ Done |
+| 11 | PowerShell automation scripts (`start.ps1` and `stop.ps1`) | ✅ Done |
 
 ---
 

@@ -35,7 +35,7 @@ Start-Process powershell -ArgumentList "-NoExit", "-Command", "`$Host.UI.RawUI.W
 
 # Start Proxy Server
 Write-Host "  -> Starting Local Proxy Server on port 3000..." -ForegroundColor Green
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "`$Host.UI.RawUI.WindowTitle = 'Proxy Server'; .\venv\Scripts\python.exe proxy_server.py 3000"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "`$Host.UI.RawUI.WindowTitle = 'Proxy Server'; .\venv\Scripts\python.exe scripts/proxy_server.py 3000"
 
 # 4. Cloudflare Tunnel
 Write-Host ""

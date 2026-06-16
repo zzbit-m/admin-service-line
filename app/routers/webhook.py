@@ -39,11 +39,11 @@ async def line_webhook(request: Request):
             reply_token = event["replyToken"]
             text = event["message"]["text"].strip().lower()
 
-            if text in ["hi", "hello", "menu", "help", "สวัสดี", "เมนู"]:
+            if text in ["hi", "hello", "hey", "menu", "help", "start", "home", "book", "booking", "สวัสดี", "เมนู"]:
                 await send_reply(reply_token, [
                     {
                         "type": "flex",
-                        "altText": "⚡ Booking & Requests Menu",
+                        "altText": "Welcome to Service Portal! Tap to get started.",
                         "contents": {
                             "type": "bubble",
                             "size": "mega",
@@ -54,23 +54,23 @@ async def line_webhook(request: Request):
                                     "type": "linearGradient",
                                     "angle": "135deg",
                                     "startColor": "#06C755",
-                                    "endColor": "#05A847"
+                                    "endColor": "#04964A"
                                 },
-                                "paddingAll": "20px",
+                                "paddingAll": "24px",
                                 "contents": [
                                     {
                                         "type": "text",
-                                        "text": "Booking & Requests",
+                                        "text": "Service Portal",
                                         "weight": "bold",
                                         "color": "#ffffff",
                                         "size": "xl"
                                     },
                                     {
                                         "type": "text",
-                                        "text": "Service Portal",
-                                        "color": "#E8FAF0",
+                                        "text": "Booking & Request Management",
+                                        "color": "#C8F5D8",
                                         "size": "xs",
-                                        "margin": "xs"
+                                        "margin": "sm"
                                     }
                                 ]
                             },
@@ -78,14 +78,19 @@ async def line_webhook(request: Request):
                                 "type": "box",
                                 "layout": "vertical",
                                 "paddingAll": "20px",
-                                "spacing": "md",
+                                "spacing": "lg",
                                 "contents": [
                                     {
                                         "type": "text",
-                                        "text": "Select an action below to get started: 👇",
+                                        "text": "Hi there! What would you like to do?",
                                         "weight": "bold",
                                         "size": "sm",
-                                        "color": "#1E2937"
+                                        "color": "#1E293B",
+                                        "wrap": True
+                                    },
+                                    {
+                                        "type": "separator",
+                                        "color": "#E2E8F0"
                                     },
                                     {
                                         "type": "box",
@@ -95,9 +100,9 @@ async def line_webhook(request: Request):
                                             {
                                                 "type": "box",
                                                 "layout": "horizontal",
-                                                "backgroundColor": "#E8FAF0",
-                                                "paddingAll": "12px",
-                                                "cornerRadius": "md",
+                                                "backgroundColor": "#ECFDF5",
+                                                "paddingAll": "14px",
+                                                "cornerRadius": "lg",
                                                 "action": {
                                                     "type": "uri",
                                                     "label": "New Request",
@@ -107,30 +112,39 @@ async def line_webhook(request: Request):
                                                 "contents": [
                                                     {
                                                         "type": "text",
-                                                        "text": "➕",
-                                                        "size": "lg",
-                                                        "flex": 0,
-                                                        "margin": "none"
+                                                        "text": "📝",
+                                                        "size": "xl",
+                                                        "flex": 0
                                                     },
                                                     {
                                                         "type": "box",
                                                         "layout": "vertical",
-                                                        "margin": "md",
+                                                        "margin": "lg",
+                                                        "flex": 1,
                                                         "contents": [
                                                             {
                                                                 "type": "text",
                                                                 "text": "New Request",
                                                                 "weight": "bold",
                                                                 "size": "sm",
-                                                                "color": "#047857"
+                                                                "color": "#065F46"
                                                             },
                                                             {
                                                                 "type": "text",
-                                                                "text": "Book rooms, vehicles, or log issues",
+                                                                "text": "Book a room, vehicle, or report an issue",
                                                                 "size": "xxs",
-                                                                "color": "#065F46"
+                                                                "color": "#059669",
+                                                                "wrap": True
                                                             }
                                                         ]
+                                                    },
+                                                    {
+                                                        "type": "text",
+                                                        "text": ">",
+                                                        "size": "lg",
+                                                        "color": "#A7F3D0",
+                                                        "flex": 0,
+                                                        "align": "end"
                                                     }
                                                 ]
                                             },
@@ -138,8 +152,8 @@ async def line_webhook(request: Request):
                                                 "type": "box",
                                                 "layout": "horizontal",
                                                 "backgroundColor": "#EFF6FF",
-                                                "paddingAll": "12px",
-                                                "cornerRadius": "md",
+                                                "paddingAll": "14px",
+                                                "cornerRadius": "lg",
                                                 "action": {
                                                     "type": "uri",
                                                     "label": "My Requests",
@@ -150,14 +164,14 @@ async def line_webhook(request: Request):
                                                     {
                                                         "type": "text",
                                                         "text": "📋",
-                                                        "size": "lg",
-                                                        "flex": 0,
-                                                        "margin": "none"
+                                                        "size": "xl",
+                                                        "flex": 0
                                                     },
                                                     {
                                                         "type": "box",
                                                         "layout": "vertical",
-                                                        "margin": "md",
+                                                        "margin": "lg",
+                                                        "flex": 1,
                                                         "contents": [
                                                             {
                                                                 "type": "text",
@@ -168,11 +182,20 @@ async def line_webhook(request: Request):
                                                             },
                                                             {
                                                                 "type": "text",
-                                                                "text": "View and track active requests",
+                                                                "text": "View status and track your requests",
                                                                 "size": "xxs",
-                                                                "color": "#3B82F6"
+                                                                "color": "#3B82F6",
+                                                                "wrap": True
                                                             }
                                                         ]
+                                                    },
+                                                    {
+                                                        "type": "text",
+                                                        "text": ">",
+                                                        "size": "lg",
+                                                        "color": "#BFDBFE",
+                                                        "flex": 0,
+                                                        "align": "end"
                                                     }
                                                 ]
                                             },
@@ -180,8 +203,8 @@ async def line_webhook(request: Request):
                                                 "type": "box",
                                                 "layout": "horizontal",
                                                 "backgroundColor": "#F8FAFC",
-                                                "paddingAll": "12px",
-                                                "cornerRadius": "md",
+                                                "paddingAll": "14px",
+                                                "cornerRadius": "lg",
                                                 "action": {
                                                     "type": "uri",
                                                     "label": "My Profile",
@@ -192,14 +215,14 @@ async def line_webhook(request: Request):
                                                     {
                                                         "type": "text",
                                                         "text": "👤",
-                                                        "size": "lg",
-                                                        "flex": 0,
-                                                        "margin": "none"
+                                                        "size": "xl",
+                                                        "flex": 0
                                                     },
                                                     {
                                                         "type": "box",
                                                         "layout": "vertical",
-                                                        "margin": "md",
+                                                        "margin": "lg",
+                                                        "flex": 1,
                                                         "contents": [
                                                             {
                                                                 "type": "text",
@@ -210,15 +233,39 @@ async def line_webhook(request: Request):
                                                             },
                                                             {
                                                                 "type": "text",
-                                                                "text": "Manage your profile details",
+                                                                "text": "View or update your account info",
                                                                 "size": "xxs",
-                                                                "color": "#64748B"
+                                                                "color": "#64748B",
+                                                                "wrap": True
                                                             }
                                                         ]
+                                                    },
+                                                    {
+                                                        "type": "text",
+                                                        "text": ">",
+                                                        "size": "lg",
+                                                        "color": "#CBD5E1",
+                                                        "flex": 0,
+                                                        "align": "end"
                                                     }
                                                 ]
                                             }
                                         ]
+                                    }
+                                ]
+                            },
+                            "footer": {
+                                "type": "box",
+                                "layout": "vertical",
+                                "paddingAll": "14px",
+                                "backgroundColor": "#F8FAFC",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "Tip: You can type \"hi\" anytime to see this again.",
+                                        "size": "xxs",
+                                        "color": "#94A3B8",
+                                        "align": "center"
                                     }
                                 ]
                             }
@@ -229,7 +276,27 @@ async def line_webhook(request: Request):
                 await send_reply(reply_token, [
                     {
                         "type": "text",
-                        "text": "Type 'menu' to see available options. 😊"
+                        "text": "Hey! I didn't quite get that.\n\nTry saying \"hi\" or \"help\" and I'll show you what I can do!",
+                        "quickReply": {
+                            "items": [
+                                {
+                                    "type": "action",
+                                    "action": {
+                                        "type": "message",
+                                        "label": "Show Options",
+                                        "text": "hi"
+                                    }
+                                },
+                                {
+                                    "type": "action",
+                                    "action": {
+                                        "type": "uri",
+                                        "label": "Open Portal",
+                                        "uri": LIFF_URL
+                                    }
+                                }
+                            ]
+                        }
                     }
                 ])
 

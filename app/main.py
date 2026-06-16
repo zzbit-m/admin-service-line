@@ -8,7 +8,7 @@ from app.core.arq_pool import create_arq_pool
 from app.db.session import engine
 from app.routers import admin, auth, auth_line, requests, attachments, resources, webhook
 
-STATIC_DIR = Path(__file__).resolve().parent.parent
+STATIC_DIR = Path(__file__).resolve().parent.parent / "public"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

@@ -92,8 +92,15 @@ Comments section, Resource UI, Reports, and Front-End Booking.
 
 Includes: `RequestComment` database models, migrations, schemas, and endpoints for request discussion. Adds admin Reports / Stats dashboard and Resource management UI. Integrates resource select dropdowns, dates, and times inside user's "New Request" page with dynamic check of occupied slots (`GET /resources/{id}/availability`) and client-side overlapping time-slot conflict validations.
 
+## Phase 11 — Complete ✅
+
+PowerShell automation scripts for starting/stopping services.
+
+Includes: `start.ps1` and `stop.ps1` scripts to automate starting Docker dependencies (db, redis, minio, n8n), running database migrations, opening separate terminal windows for FastAPI/ARQ worker/Proxy server, running Cloudflare quick tunnel in background, automatically parsing its logs to copy the webhook URL to the clipboard, and stopping everything cleanly.
+
 ---
 
 ## Future Ideas
 
 - *(none)*
+
