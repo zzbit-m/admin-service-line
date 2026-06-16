@@ -3,7 +3,7 @@ from uuid import UUID
 
 import httpx
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import r
@@ -30,8 +30,12 @@ async def list_requests(
 
 
 @router.patch("/requests/{request_id}/status", response_model=RequestResponse)
-async def update_request_status(request_id: UUID, body: StatusUpdate, db: AsyncSession = Depends(get_db), current_user: User = Depends(require_admin)):
+async def update_request_status(request_id: UUID, body: StatusUpdate, db: AsyncSession = Depends(get_db), request: Request = None, current_user: User = Depends(require_admin)):
     result = await admin_service.update_request_status(db, request_id, body.status, body.admin_note)
+    try:
+        r.delete(f"request:{request_id}")
+    except Exception:
+        pass
     try:
         async with httpx.AsyncClient() as client:
             await client.post(
@@ -42,6 +46,16 @@ async def update_request_status(request_id: UUID, body: StatusUpdate, db: AsyncS
                     "admin_note": body.admin_note,
                 }
             )
+    except Exception:
+        pass
+    try:
+        pool = request.app.state.arq_pool
+        status_messages = {
+            "approved": "\u2705 Your request has been approved.",
+            "rejected": "\u274c Your request has been rejected.",
+        }
+        if body.status in status_messages:
+            await pool.enqueue_job("send_notification", str(result.user_id), status_messages[body.status])
     except Exception:
         pass
     return result

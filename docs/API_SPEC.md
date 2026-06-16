@@ -163,6 +163,8 @@ Cancel the user's own pending request.
 
 **Response `200`:** Updated request object with `status: "cancelled"`
 
+**Note:** On success, enqueues an ARQ job to send a LINE push notification to the request owner.
+
 **Errors:**
 - `404` — request not found or not owned by user
 - `400` — request status is not "pending"
@@ -217,7 +219,7 @@ Update the status of a service request. Enforces valid transitions:
 
 **Response `200`:** Updated request object
 
-**Note:** On success, a fire-and-forget POST is sent to the n8n webhook with `{"request_id", "status", "admin_note"}`.
+**Note:** On success, a fire-and-forget POST is sent to the n8n webhook with `{"request_id", "status", "admin_note"}`. Also enqueues an ARQ job to send a LINE push notification to the request owner (if they have `line_user_id` set).
 
 **Errors:**
 - `404` — request not found

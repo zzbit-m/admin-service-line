@@ -70,6 +70,8 @@ Client → HTTP Request → FastAPI Router → Service Layer → SQLAlchemy → 
 
 - **`GET /admin/resources`** — cache-aside pattern with Redis, key `resources:all`, TTL 60 seconds
 - Cache invalidated (`r.delete`) on `POST /admin/resources` and `PATCH /admin/resources/{id}`
+- **`GET /requests/{id}`** — cache-aside pattern with Redis, key `request:{id}`, TTL 30 seconds
+- Cache invalidated (`r.delete`) on `PATCH /requests/{id}/cancel` and `PATCH /admin/requests/{id}/status`
 - Serialized as JSON via Pydantic's `model_dump(mode="json")` for correct UUID/datetime handling
 - Redis host/port configurable via `REDIS_HOST` / `REDIS_PORT` in `.env` (defaults: `localhost:6379`)
 
@@ -79,6 +81,23 @@ Client → HTTP Request → FastAPI Router → Service Layer → SQLAlchemy → 
 - Payload: `{"request_id": "<uuid>", "status": "approved|rejected", "admin_note": "<string>"}`
 - Target: `http://localhost:5678/webhook-test/<uuid>`
 - Failures are silently caught (`try/except`) so a down webhook never blocks the status update
+
+## Background Worker (ARQ)
+
+- ARQ (async Redis Queue) runs lightweight background jobs via Redis
+- `app/worker.py` defines `WorkerSettings` and the `send_notification` job function
+- `app/core/arq_pool.py` provides `create_arq_pool()` for the FastAPI lifespan to open/close a pool connection
+- Jobs are enqueued from router endpoints via `app.state.arq_pool.enqueue_job("function_name", *args)`
+- Run separately: `python -m arq app.worker.WorkerSettings`
+
+### LINE Push Notification Flow
+
+1. Admin approves/rejects a request → `PATCH /admin/requests/{id}/status` enqueues `send_notification`
+2. User cancels own request → `PATCH /requests/{id}/cancel` enqueues `send_notification`
+3. ARQ worker picks up the job and queries the user's `line_user_id` from PostgreSQL
+4. If `line_user_id` is set, worker sends `POST https://api.line.me/v2/bot/message/push` with the message text
+5. If `line_user_id` is `null` (email-only user), worker skips silently
+6. All failures are caught and logged with `print()` — never crash the worker
 
 ## Status Transition Rules
 

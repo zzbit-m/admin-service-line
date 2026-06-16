@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from app.core.arq_pool import create_arq_pool
 from app.db.session import engine
 from app.routers import admin, auth, auth_line, requests, attachments, webhook
 
@@ -11,7 +12,10 @@ STATIC_DIR = Path(__file__).resolve().parent.parent
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    arq_pool = await create_arq_pool()
+    app.state.arq_pool = arq_pool
     yield
+    await arq_pool.close()
     await engine.dispose()
 
 app = FastAPI(title="Admin Service Portal", lifespan=lifespan)

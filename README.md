@@ -28,3 +28,13 @@ uvicorn app.main:app --reload
 4. Open `https://<ngrok-url>/liff-test.html` in browser
 5. LINE profile `displayName` is stored in `full_name` column on users table
 
+## Background Worker (ARQ)
+
+Run the ARQ worker to process LINE push notifications:
+
+```bash
+python -m arq app.worker.WorkerSettings
+```
+
+The worker reads Redis config from `.env` (`REDIS_HOST` / `REDIS_PORT`) and connects to the same PostgreSQL database to look up `line_user_id` before sending push messages via LINE Messaging API.
+

@@ -20,12 +20,14 @@ project/
 ├── app/
 │   ├── __init__.py
 │   ├── main.py                   # FastAPI app, CORS, lifespan, router registration
+│   ├── worker.py                 # ARQ WorkerSettings + send_notification LINE push job
 │   ├── core/
 │   │   ├── __init__.py
 │   │   ├── config.py             # Pydantic Settings loaded from .env (DB, JWT, S3, Redis)
 │   │   ├── security.py           # bcrypt hashing + JWT create/decode
 │   │   ├── dependencies.py       # get_current_user / require_admin dependencies
 │   │   ├── cache.py              # Redis connection (sync client, decode_responses=True)
+│   │   ├── arq_pool.py           # create_arq_pool helper for ARQ lifecycle
 │   │   └── storage.py            # boto3 S3 client and async upload_file helper
 │   ├── db/
 │   │   ├── __init__.py

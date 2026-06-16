@@ -56,8 +56,22 @@ Includes: `full_name` column added to User model (`String(255)`, nullable), Alem
 
 ---
 
+## Phase 6 — Complete ✅
+
+Redis cache for request status queries + ARQ background worker scaffold.
+
+Includes: Cache-aside on `GET /requests/{id}` with TTL 30s and invalidation on approve/reject/cancel. ARQ worker scaffold with `WorkerSettings`, `create_arq_pool` helper, lifespan wiring, and `send_notification` placeholder.
+
+---
+
+## Phase 7 — Complete ✅
+
+LINE push notifications via ARQ worker on status changes.
+
+Includes: `send_notification` implementation queries user's `line_user_id` and sends LINE push message via Messaging API. Enqueues on approve (admin), reject (admin), and cancel (user). Silent failure on missing `line_user_id` or worker not running.
+
+---
+
 ## Future Ideas
 
-- Redis caching for request status queries
-- Background task queue (future-ready)
 - n8n webhook for additional event types
