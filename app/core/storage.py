@@ -33,3 +33,22 @@ async def upload_file(file: UploadFile, folder: str) -> str:
     await loop.run_in_executor(None, _upload)
 
     return f"{settings.S3_ENDPOINT}/{settings.S3_BUCKET}/{filename}"
+
+
+async def upload_file_bytes(filename: str | None, content_type: str | None, data: bytes, folder: str) -> str:
+    """Upload pre-read bytes directly — avoids double-reading an UploadFile stream."""
+    from pathlib import Path as _Path
+    ext = _Path(filename).suffix if filename else ""
+    key = f"{folder}/{uuid.uuid4()}{ext}"
+
+    def _upload():
+        s3_client.put_object(
+            Bucket=settings.S3_BUCKET,
+            Key=key,
+            Body=data,
+            ContentType=content_type or "application/octet-stream",
+        )
+
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, _upload)
+    return f"{settings.S3_ENDPOINT}/{settings.S3_BUCKET}/{key}"

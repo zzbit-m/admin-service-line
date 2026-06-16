@@ -8,20 +8,25 @@ BACKEND = "http://localhost:8001"
 
 
 class ProxyHandler(http.server.SimpleHTTPRequestHandler):
+    def should_proxy(self, path):
+        clean_path = path.split("?")[0]
+        prefixes = ["/auth", "/requests", "/admin", "/attachments"]
+        return any(clean_path == p or clean_path.startswith(p + "/") for p in prefixes)
+
     def do_GET(self):
-        if self.path.startswith("/auth/"):
+        if self.should_proxy(self.path):
             return self._proxy("GET")
         return super().do_GET()
 
     def do_POST(self):
-        if self.path.startswith("/auth/"):
+        if self.should_proxy(self.path):
             return self._proxy("POST")
-        return super().do_POST()
+        self.send_error(501, "Unsupported method ('POST')")
 
     def do_PATCH(self):
-        if self.path.startswith("/admin/") or self.path.startswith("/requests/") or self.path.startswith("/attachments/"):
+        if self.should_proxy(self.path):
             return self._proxy("PATCH")
-        return super().do_PATCH()
+        self.send_error(501, "Unsupported method ('PATCH')")
 
     def _proxy(self, method):
         body = None
@@ -41,10 +46,10 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
                 for k, v in resp.headers.items():
                     if k.lower() not in ("transfer-encoding", "content-encoding", "content-length"):
                         self.send_header(k, v)
-                self.send_header("Content-Length", str(len(resp.read())))
+                content = resp.read()
+                self.send_header("Content-Length", str(len(content)))
                 self.end_headers()
-                resp.seek(0)
-                self.wfile.write(resp.read())
+                self.wfile.write(content)
         except urllib.error.HTTPError as e:
             self.send_response(e.code)
             body = e.read()

@@ -29,6 +29,8 @@ async def create_request(body: RequestCreate, db: AsyncSession = Depends(get_db)
                     "event": "request_created",
                     "request_id": str(sr.id),
                     "user_id": str(sr.user_id),
+                    "user_name": current_user.full_name or current_user.email,
+                    "user_email": current_user.email,
                     "title": sr.title,
                     "resource_id": str(sr.resource_id) if sr.resource_id else None,
                 },
@@ -47,6 +49,12 @@ async def list_my_requests(
     current_user: User = Depends(get_current_user),
 ):
     return await request_service.get_user_requests(db, current_user.id, skip, limit)
+
+
+@router.post("/archive", status_code=status.HTTP_200_OK)
+async def archive_my_history(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    count = await request_service.archive_completed_requests(db, current_user.id)
+    return {"message": "History cleared", "archived_count": count}
 
 
 @router.patch("/{request_id}/cancel", response_model=RequestResponse)
@@ -69,6 +77,8 @@ async def cancel_request(request_id: UUID, db: AsyncSession = Depends(get_db), r
                     "event": "request_cancelled",
                     "request_id": str(request_id),
                     "user_id": str(sr.user_id),
+                    "user_name": current_user.full_name or current_user.email,
+                    "user_email": current_user.email,
                 },
                 timeout=3.0,
             )

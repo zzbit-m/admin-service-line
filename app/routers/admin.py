@@ -42,6 +42,13 @@ async def update_request_status(request_id: UUID, body: StatusUpdate, db: AsyncS
     except Exception:
         pass
     try:
+        from sqlalchemy import select
+        from app.models.user import User
+        user_res = await db.execute(select(User).where(User.id == result.user_id))
+        user_obj = user_res.scalar_one_or_none()
+        user_name = (user_obj.full_name or user_obj.email) if user_obj else "Unknown"
+        user_email = user_obj.email if user_obj else "unknown"
+
         async with httpx.AsyncClient() as client:
             await client.post(
                 "http://localhost:5678/webhook/48c0cd3b-20d8-43c2-a4dc-e6b5dfd208f9",
@@ -50,6 +57,9 @@ async def update_request_status(request_id: UUID, body: StatusUpdate, db: AsyncS
                         "request_id": str(request_id),
                         "status": body.status,
                         "admin_note": body.admin_note,
+                        "user_id": str(result.user_id),
+                        "user_name": user_name,
+                        "user_email": user_email,
                     }
             )
     except Exception:

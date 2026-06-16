@@ -39,7 +39,8 @@ async def upload_attachment(
             detail="File size exceeds 5MB limit",
         )
 
-    file_url = await storage.upload_file(file, folder="attachments")
+    # Pass pre-read bytes directly to avoid double-read (file stream already consumed)
+    file_url = await storage.upload_file_bytes(file.filename, file.content_type, file_bytes, folder="attachments")
 
     attachment = Attachment(
         request_id=request_id,

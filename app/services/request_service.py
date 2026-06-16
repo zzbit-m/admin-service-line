@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.request import ServiceRequest
 
@@ -51,7 +52,8 @@ async def create_request(
 async def get_user_requests(db: AsyncSession, user_id: UUID, skip: int = 0, limit: int = 20) -> list[ServiceRequest]:
     result = await db.execute(
         select(ServiceRequest)
-        .where(ServiceRequest.user_id == user_id)
+        .options(selectinload(ServiceRequest.user))
+        .where(ServiceRequest.user_id == user_id, ServiceRequest.is_archived == False)
         .order_by(ServiceRequest.created_at.desc())
         .offset(skip)
         .limit(limit)
@@ -61,7 +63,9 @@ async def get_user_requests(db: AsyncSession, user_id: UUID, skip: int = 0, limi
 
 async def get_user_request_by_id(db: AsyncSession, user_id: UUID, request_id: UUID) -> ServiceRequest:
     result = await db.execute(
-        select(ServiceRequest).where(ServiceRequest.id == request_id, ServiceRequest.user_id == user_id)
+        select(ServiceRequest)
+        .options(selectinload(ServiceRequest.user))
+        .where(ServiceRequest.id == request_id, ServiceRequest.user_id == user_id)
     )
     sr = result.scalar_one_or_none()
     if sr is None:
@@ -91,3 +95,19 @@ async def cancel_request(db: AsyncSession, user_id: UUID, request_id: UUID) -> S
     await db.commit()
     await db.refresh(sr)
     return sr
+
+
+async def archive_completed_requests(db: AsyncSession, user_id: UUID) -> int:
+    from sqlalchemy import update
+    stmt = (
+        update(ServiceRequest)
+        .where(
+            ServiceRequest.user_id == user_id,
+            ServiceRequest.status.in_(["approved", "rejected", "cancelled"]),
+            ServiceRequest.is_archived == False
+        )
+        .values(is_archived=True)
+    )
+    result = await db.execute(stmt)
+    await db.commit()
+    return result.rowcount

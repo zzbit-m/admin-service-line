@@ -3,6 +3,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.request import ServiceRequest
 from app.models.resource import Resource
@@ -16,7 +17,7 @@ VALID_TRANSITIONS = {
 
 
 async def list_all_requests(db: AsyncSession, status_filter: str | None = None, skip: int = 0, limit: int = 20) -> list[ServiceRequest]:
-    query = select(ServiceRequest).order_by(ServiceRequest.created_at.desc())
+    query = select(ServiceRequest).options(selectinload(ServiceRequest.user)).order_by(ServiceRequest.created_at.desc())
     if status_filter:
         query = query.where(ServiceRequest.status == status_filter)
     query = query.offset(skip).limit(limit)
@@ -25,7 +26,7 @@ async def list_all_requests(db: AsyncSession, status_filter: str | None = None, 
 
 
 async def get_request_by_id(db: AsyncSession, request_id: UUID) -> ServiceRequest:
-    result = await db.execute(select(ServiceRequest).where(ServiceRequest.id == request_id))
+    result = await db.execute(select(ServiceRequest).options(selectinload(ServiceRequest.user)).where(ServiceRequest.id == request_id))
     sr = result.scalar_one_or_none()
     if sr is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found")

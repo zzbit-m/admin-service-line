@@ -91,7 +91,7 @@
         },
         "sendBody": true,
         "contentType": "json",
-        "body": "={\n  \"to\": \"Ub5d366082158f0fe3cde3d824e0ea449\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"📋 New request created\\nRequest ID: {{ $json.body.request_id }}\\nTitle: {{ $json.body.title }}\\nUser ID: {{ $json.body.user_id }}\"\n    }\n  ]\n}"
+        "body": "={\n  \"to\": \"Ub5d366082158f0fe3cde3d824e0ea449\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"📋 New request created\\nRequest ID: {{ $json.body.request_id }}\\nTitle: {{ $json.body.title }}\\nUser: {{ $json.body.user_name }} ({{ $json.body.user_email }})\"\n    }\n  ]\n}"
       },
       "id": "line-push-created",
       "name": "LINE push — new request (admin)",
@@ -116,7 +116,7 @@
         },
         "sendBody": true,
         "contentType": "json",
-        "body": "={\n  \"to\": \"Ub5d366082158f0fe3cde3d824e0ea449\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"🚫 Request cancelled\\nRequest ID: {{ $json.body.request_id }}\\nUser ID: {{ $json.body.user_id }}\"\n    }\n  ]\n}"
+        "body": "={\n  \"to\": \"Ub5d366082158f0fe3cde3d824e0ea449\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"🚫 Request cancelled\\nRequest ID: {{ $json.body.request_id }}\\nUser: {{ $json.body.user_name }} ({{ $json.body.user_email }})\"\n    }\n  ]\n}"
       },
       "id": "line-push-cancelled",
       "name": "LINE push — cancelled (admin)",

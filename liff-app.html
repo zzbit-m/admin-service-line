@@ -2,109 +2,755 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Service Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Service Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; }
-    .header { background: #06C755; color: white; padding: 16px; text-align: center; font-size: 18px; font-weight: bold; position: sticky; top: 0; z-index: 10; }
-    .container { padding: 16px; max-width: 480px; margin: 0 auto; }
-    .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
-    .card p { font-size: 13px; color: #666; margin-top: 6px; line-height: 1.4; }
-    .card strong { font-size: 15px; }
-    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; margin-right: 4px; }
-    .badge.pending { background: #fff3cd; color: #856404; }
-    .badge.approved { background: #d4edda; color: #155724; }
-    .badge.rejected { background: #f8d7da; color: #721c24; }
-    .badge.cancelled { background: #e2e3e5; color: #383d41; }
-    .badge.type { background: #e8f4fd; color: #0c5460; }
-    .btn { display: block; width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; margin-top: 8px; text-align: center; }
-    .btn.primary { background: #06C755; color: white; }
-    .btn.danger { background: #dc3545; color: white; }
-    .btn.secondary { background: #eee; color: #333; }
-    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-    .btn.small { display: inline-block; width: auto; padding: 8px 16px; font-size: 13px; }
-    input, textarea, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; margin-top: 4px; font-family: inherit; }
-    label { font-size: 13px; font-weight: bold; color: #555; margin-top: 12px; display: block; }
-    .meta { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 6px; }
-    .meta span { font-size: 11px; color: #999; }
-    .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
-    .tab { flex: 1; padding: 10px; text-align: center; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; background: #eee; color: #666; }
-    .tab.active { background: #06C755; color: white; }
-    .admin-note { background: #fffde7; border-left: 3px solid #f9a825; padding: 10px; border-radius: 6px; margin-top: 8px; font-size: 13px; }
-    .admin-note strong { font-size: 12px; color: #f57f17; }
-    .refresh { float: right; background: none; border: none; color: white; font-size: 20px; cursor: pointer; padding: 0 8px; }
-    .error-msg { color: #dc3545; font-size: 13px; margin-top: 4px; display: none; }
-    .empty { text-align: center; color: #999; padding: 40px 16px; font-size: 15px; }
+    /* ── Reset & Tokens ─────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green:       #06C755;
+      --green-dark:  #05a847;
+      --green-light: #e8faf0;
+      --red:         #ff4d4f;
+      --red-light:   #fff1f0;
+      --amber:       #f59e0b;
+      --amber-light: #fffbeb;
+      --blue:        #3b82f6;
+      --blue-light:  #eff6ff;
+      --slate-50:    #f8fafc;
+      --slate-100:   #f1f5f9;
+      --slate-200:   #e2e8f0;
+      --slate-400:   #94a3b8;
+      --slate-500:   #64748b;
+      --slate-600:   #475569;
+      --slate-700:   #334155;
+      --slate-800:   #1e293b;
+      --slate-900:   #0f172a;
+      --white:       #ffffff;
+      --shadow-sm:   0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+      --shadow-md:   0 4px 12px rgba(0,0,0,.10), 0 2px 6px rgba(0,0,0,.07);
+      --radius-sm:   8px;
+      --radius-md:   12px;
+      --radius-lg:   16px;
+      --transition:  all .2s cubic-bezier(.4,0,.2,1);
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--slate-50);
+      color: var(--slate-800);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    .header {
+      background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);
+      color: var(--white);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 12px rgba(6,199,85,.35);
+    }
+    .header-inner {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 0 12px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -.3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header-title .role-chip {
+      font-size: 10px;
+      font-weight: 600;
+      background: rgba(255,255,255,.22);
+      border-radius: 20px;
+      padding: 2px 8px;
+      letter-spacing: .5px;
+      text-transform: uppercase;
+    }
+    .header-actions { display: flex; gap: 4px; }
+    .icon-btn {
+      background: rgba(255,255,255,.18);
+      border: none;
+      border-radius: 8px;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: white;
+      font-size: 16px;
+      transition: var(--transition);
+    }
+    .icon-btn:hover { background: rgba(255,255,255,.28); }
+
+    /* ── Page container ──────────────────────────────────────── */
+    .page {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 16px 12px 32px;
+      animation: fadeUp .3s ease forwards;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Tabs ────────────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      background: var(--slate-100);
+      border-radius: var(--radius-md);
+      padding: 4px;
+      margin-bottom: 16px;
+      gap: 4px;
+    }
+    .tab {
+      flex: 1;
+      padding: 9px 8px;
+      text-align: center;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--slate-500);
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+    .tab.active {
+      background: var(--white);
+      color: var(--slate-800);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* ── Cards ───────────────────────────────────────────────── */
+    .card {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--slate-100);
+      transition: var(--transition);
+    }
+    .card.clickable { cursor: pointer; }
+    .card.clickable:hover  { box-shadow: var(--shadow-md); transform: translateY(-1px); border-color: var(--slate-200); }
+    .card.clickable:active { transform: translateY(0); }
+
+    /* Step 1-B — Status left-border accent */
+    .card[data-status="pending"]   { border-left: 4px solid var(--amber);      padding-left: 12px; }
+    .card[data-status="approved"]  { border-left: 4px solid var(--green);      padding-left: 12px; }
+    .card[data-status="rejected"]  { border-left: 4px solid var(--red);        padding-left: 12px; }
+    .card[data-status="cancelled"] { border-left: 4px solid var(--slate-400);  padding-left: 12px; }
+
+    .card-row   { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .card-title { font-size: 14px; font-weight: 600; color: var(--slate-800); line-height: 1.4; flex: 1; }
+    .card-meta  { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+    .card-date  { font-size: 11px; color: var(--slate-400); font-weight: 500; }
+    .card-desc  { font-size: 12px; color: var(--slate-500); margin-top: 6px; line-height: 1.5; }
+    .card-arrow { color: var(--slate-300); font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+    /* ── Badges ──────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 8px; border-radius: 20px; font-size: 11px; font-weight: 600;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+    .badge-pending   { background: var(--amber-light); color: #92400e; }
+    .badge-pending::before   { background: var(--amber); }
+    .badge-approved  { background: var(--green-light);  color: #065f46; }
+    .badge-approved::before  { background: var(--green); }
+    .badge-rejected  { background: var(--red-light);    color: #991b1b; }
+    .badge-rejected::before  { background: var(--red); }
+    .badge-cancelled { background: var(--slate-100);    color: var(--slate-500); }
+    .badge-cancelled::before { background: var(--slate-400); }
+
+    .tag {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 500;
+      background: var(--blue-light); color: #1e40af;
+    }
+
+    /* ── Section header ──────────────────────────────────────── */
+    .section-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .section-hd h2 { font-size: 13px; font-weight: 600; color: var(--slate-500); text-transform: uppercase; letter-spacing: .6px; }
+    .count-chip { font-size: 11px; font-weight: 600; background: var(--green-light); color: var(--green-dark); border-radius: 20px; padding: 2px 8px; }
+
+    /* ── Empty / Error ───────────────────────────────────────── */
+    .empty-state { text-align: center; padding: 48px 24px; }
+    .empty-state .empty-icon { font-size: 44px; margin-bottom: 12px; }
+    .empty-state h3 { font-size: 16px; font-weight: 600; color: var(--slate-700); margin-bottom: 6px; }
+    .empty-state p  { font-size: 13px; color: var(--slate-400); line-height: 1.6; }
+
+    .btn-retry {
+      display: inline-flex; align-items: center; gap: 6px; margin-top: 14px;
+      padding: 9px 16px; border-radius: var(--radius-sm); background: var(--slate-100);
+      border: 1px solid var(--slate-200); color: var(--slate-600); font-size: 13px;
+      font-weight: 600; font-family: inherit; cursor: pointer; transition: var(--transition);
+    }
+    .btn-retry:hover { background: var(--slate-200); }
+
+    /* ── Step 1-C: Skeleton shimmer ──────────────────────────── */
+    .skeleton {
+      background: linear-gradient(90deg, var(--slate-100) 25%, var(--slate-200) 50%, var(--slate-100) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: var(--radius-md);
+    }
+    @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+    .skeleton-card { height: 80px; margin-bottom: 10px; }
+
+    /* ── Loader (signin / page) ──────────────────────────────── */
+    .loader { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 24px; gap: 16px; }
+    .spinner { width: 32px; height: 32px; border: 3px solid var(--slate-200); border-top-color: var(--green); border-radius: 50%; animation: spin .7s linear infinite; }
+    .spinner-sm { width: 16px; height: 16px; border-width: 2px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader-text { font-size: 13px; color: var(--slate-400); font-weight: 500; }
+
+    /* ── Buttons ─────────────────────────────────────────────── */
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      width: 100%; padding: 13px 16px; border: none; border-radius: var(--radius-md);
+      font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer;
+      transition: var(--transition); margin-top: 10px;
+    }
+    .btn:disabled { opacity: .55; cursor: not-allowed; pointer-events: none; }
+    .btn-primary  { background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%); color: white; box-shadow: 0 3px 10px rgba(6,199,85,.35); }
+    .btn-primary:hover  { filter: brightness(1.06); transform: translateY(-1px); box-shadow: 0 5px 14px rgba(6,199,85,.45); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-danger   { background: linear-gradient(135deg, #ff4d4f 0%, #d93025 100%); color: white; box-shadow: 0 3px 10px rgba(255,77,79,.3); }
+    .btn-danger:hover   { filter: brightness(1.07); transform: translateY(-1px); }
+    .btn-danger:active  { transform: translateY(0); }
+    .btn-ghost    { background: var(--slate-100); color: var(--slate-600); border: 1px solid var(--slate-200); }
+    .btn-ghost:hover    { background: var(--slate-200); }
+    .btn-sm       { width: auto; padding: 8px 14px; font-size: 13px; margin-top: 0; }
+    .btn-row      { display: flex; gap: 8px; margin-top: 10px; }
+    .btn-row .btn { margin-top: 0; }
+
+    /* ── FAB ─────────────────────────────────────────────────── */
+    .fab {
+      position: fixed; bottom: 24px; right: 50%; transform: translateX(50%);
+      background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);
+      color: white; border: none; border-radius: 28px; padding: 14px 24px;
+      font-size: 14px; font-weight: 700; font-family: inherit; cursor: pointer;
+      box-shadow: 0 4px 16px rgba(6,199,85,.45); display: flex; align-items: center;
+      gap: 8px; transition: var(--transition); z-index: 50;
+    }
+    .fab:hover  { transform: translateX(50%) translateY(-2px); box-shadow: 0 6px 20px rgba(6,199,85,.55); }
+    .fab:active { transform: translateX(50%) translateY(0); }
+
+    /* ── Form ────────────────────────────────────────────────── */
+    .form-group { margin-top: 14px; }
+    .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--slate-600); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .4px; }
+    .form-label .req { color: var(--red); margin-left: 2px; }
+    .form-control {
+      width: 100%; padding: 11px 14px; border: 1.5px solid var(--slate-200);
+      border-radius: var(--radius-sm); font-size: 14px; font-family: inherit;
+      color: var(--slate-800); background: var(--white); transition: var(--transition); outline: none;
+    }
+    .form-control:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(6,199,85,.12); }
+    .form-control.error { border-color: var(--red); }
+    .form-error { font-size: 12px; color: var(--red); margin-top: 4px; display: none; }
+    .form-error.visible { display: block; }
+    textarea.form-control { resize: vertical; min-height: 80px; line-height: 1.5; }
+
+    /* ── Step 1-A: Type tile grid ────────────────────────────── */
+    .type-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+    .type-tile {
+      padding: 14px 10px; border: 2px solid var(--slate-200); border-radius: var(--radius-md);
+      text-align: center; cursor: pointer; transition: var(--transition); background: var(--white);
+      user-select: none;
+    }
+    .type-tile:active { transform: scale(.96); }
+    .type-tile.selected { border-color: var(--green); background: var(--green-light); }
+    .type-tile-icon  { font-size: 26px; display: block; margin-bottom: 4px; }
+    .type-tile-label { font-size: 12px; font-weight: 600; color: var(--slate-700); }
+
+    /* ── Step 1-E: Preset note chips ─────────────────────────── */
+    .chip-group { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+    .chip {
+      padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;
+      background: var(--slate-100); color: var(--slate-600); border: 1px solid var(--slate-200);
+      cursor: pointer; transition: var(--transition); user-select: none;
+    }
+    .chip:hover    { background: var(--slate-200); }
+    .chip.selected { background: var(--green-light); color: #065f46; border-color: var(--green); font-weight: 600; }
+
+    /* ── Step 1-F: Confirm bottom sheet ──────────────────────── */
+    .sheet-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 300;
+      display: flex; align-items: flex-end; animation: fadeBg .15s;
+    }
+    @keyframes fadeBg { from { opacity: 0; } to { opacity: 1; } }
+    .sheet {
+      background: var(--white); border-radius: 20px 20px 0 0; padding: 24px 16px 40px;
+      width: 100%; max-width: 480px; margin: 0 auto; animation: slideUp .22s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .sheet-handle { width: 36px; height: 4px; background: var(--slate-200); border-radius: 2px; margin: 0 auto 20px; }
+    .sheet-title  { font-size: 16px; font-weight: 700; text-align: center; margin-bottom: 6px; color: var(--slate-800); }
+    .sheet-desc   { font-size: 13px; color: var(--slate-500); text-align: center; margin-bottom: 20px; line-height: 1.5; }
+
+    /* ── Step 1-H: Status timeline ───────────────────────────── */
+    .timeline { padding: 4px 0 4px; }
+    .tl-step  { display: flex; gap: 12px; padding-bottom: 14px; position: relative; }
+    .tl-step:not(:last-child)::after {
+      content: ''; position: absolute; left: 7px; top: 18px;
+      width: 2px; height: calc(100% - 4px); background: var(--slate-200);
+    }
+    .tl-dot { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; border: 2px solid var(--slate-200); background: var(--white); }
+    .tl-dot.done   { background: var(--green); border-color: var(--green); }
+    .tl-dot.active { background: var(--amber); border-color: var(--amber); box-shadow: 0 0 0 3px rgba(245,158,11,.2); }
+    .tl-dot.fail   { background: var(--red);   border-color: var(--red); }
+    .tl-label { font-size: 13px; font-weight: 600; color: var(--slate-700); }
+    .tl-time  { font-size: 11px; color: var(--slate-400); margin-top: 2px; }
+
+    /* ── Detail sections ─────────────────────────────────────── */
+    .detail-hero {
+      background: linear-gradient(135deg, var(--slate-800) 0%, var(--slate-900) 100%);
+      border-radius: var(--radius-lg); padding: 20px; color: white; margin-bottom: 12px;
+    }
+    .detail-hero-title { font-size: 18px; font-weight: 700; line-height: 1.3; margin-bottom: 12px; }
+    .detail-hero-meta  { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+    .info-block { background: var(--white); border-radius: var(--radius-md); border: 1px solid var(--slate-100); overflow: hidden; margin-bottom: 12px; }
+    .info-row   { display: flex; padding: 12px 16px; gap: 12px; border-bottom: 1px solid var(--slate-100); }
+    .info-row:last-child { border-bottom: none; }
+    .info-key   { font-size: 12px; font-weight: 600; color: var(--slate-400); width: 80px; flex-shrink: 0; text-transform: uppercase; letter-spacing: .3px; padding-top: 1px; }
+    .info-val   { font-size: 13px; color: var(--slate-700); line-height: 1.5; }
+
+    .admin-note-box { background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 1px solid #fde68a; border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 12px; }
+    .admin-note-box .note-label { font-size: 11px; font-weight: 700; color: #92400e; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+    .admin-note-box p { font-size: 13px; color: #78350f; line-height: 1.5; }
+
+    /* ── User chip ───────────────────────────────────────────── */
+    .user-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--slate-500); background: var(--slate-100); border-radius: 20px; padding: 2px 8px; font-weight: 500; }
+
+    /* ── Back button ─────────────────────────────────────────── */
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600;
+      color: var(--slate-500); background: none; border: none; cursor: pointer;
+      padding: 4px 0; margin-bottom: 14px; font-family: inherit; transition: var(--transition);
+    }
+    .back-btn:hover { color: var(--slate-800); }
+
+    /* ── Toast ───────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: var(--slate-800); color: white; border-radius: var(--radius-sm);
+      padding: 10px 18px; font-size: 13px; font-weight: 500; opacity: 0;
+      transition: all .3s ease; z-index: 200; white-space: nowrap; pointer-events: none;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── Step 1-I: New card flash ────────────────────────────── */
+    @keyframes flashGreen { 0%,100% { background: var(--white); } 35% { background: #d1fae5; } }
+    .card.flash { animation: flashGreen 1.6s ease; }
+
+    /* ── Photo upload ────────────────────────────────────────── */
+    .photo-upload-area {
+      border: 2px dashed var(--slate-200); border-radius: var(--radius-md);
+      padding: 20px; text-align: center; cursor: pointer;
+      transition: var(--transition); margin-top: 6px; background: var(--slate-50);
+    }
+    .photo-upload-area:hover { border-color: var(--green); background: var(--green-light); }
+    .photo-upload-area.has-file { border-color: var(--green); border-style: solid; background: var(--green-light); }
+    .photo-upload-icon { font-size: 28px; display: block; margin-bottom: 6px; }
+    .photo-upload-text { font-size: 13px; font-weight: 600; color: var(--slate-500); }
+    .photo-upload-hint { font-size: 11px; color: var(--slate-400); margin-top: 3px; }
+    .photo-preview {
+      width: 100%; max-height: 180px; object-fit: cover;
+      border-radius: var(--radius-sm); margin-top: 10px; display: none;
+    }
+    .photo-preview.visible { display: block; }
+    .photo-clear {
+      display: none; margin-top: 8px; font-size: 12px; font-weight: 600;
+      color: var(--red); cursor: pointer; background: none; border: none; font-family: inherit;
+    }
+    .photo-clear.visible { display: inline-flex; align-items: center; gap: 4px; }
+
+    /* ── Attachments on detail ───────────────────────────────── */
+    .attachment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px; }
+    .attachment-img {
+      width: 100%; aspect-ratio: 4/3; object-fit: cover;
+      border-radius: var(--radius-sm); cursor: pointer;
+      border: 1px solid var(--slate-200); transition: var(--transition);
+    }
+    .attachment-img:hover { opacity: .85; transform: scale(1.02); }
+    .attachment-file {
+      display: flex; align-items: center; gap: 8px; padding: 10px 12px;
+      background: var(--slate-50); border: 1px solid var(--slate-200);
+      border-radius: var(--radius-sm); font-size: 13px; color: var(--slate-700);
+      text-decoration: none; font-weight: 500;
+    }
+    .attachment-file:hover { background: var(--slate-100); }
+
+    /* ── Upload progress ─────────────────────────────────────── */
+    .upload-progress {
+      height: 4px; background: var(--slate-200); border-radius: 2px;
+      margin-top: 10px; overflow: hidden; display: none;
+    }
+    .upload-progress.visible { display: block; }
+    .upload-bar {
+      height: 100%; background: linear-gradient(90deg, var(--green), var(--green-dark));
+      border-radius: 2px; animation: progressPulse 1s ease infinite alternate;
+      width: 60%;
+    }
+    @keyframes progressPulse { from { opacity:.6; } to { opacity:1; } }
+
+    /* ── Utility ─────────────────────────────────────────────── */
+    .pb-fab { padding-bottom: 88px; }
+    .mt-12  { margin-top: 12px; }
   </style>
 </head>
 <body>
-  <div class="header">Admin Service Portal</div>
-  <div class="container" id="app">
-    <div class="empty">Loading...</div>
+
+<header class="header" id="header">
+  <div class="header-inner">
+    <div class="header-title" id="header-title">
+      <span>⚡</span><span>Service Portal</span>
+    </div>
+    <div class="header-actions" id="header-actions"></div>
   </div>
+</header>
 
-  <script>
-    const LIFF_ID = "2010375597-spCTVMCi";
-    const API_BASE = "";
-    let accessToken = null;
-    let userRole = null;
+<div id="app" class="page">
+  <div class="loader"><div class="spinner"></div><p class="loader-text">Signing you in…</p></div>
+</div>
+<div id="toast"></div>
 
-    function decodeToken(token) {
-      try { return JSON.parse(atob(token.split(".")[1])); } catch(e) { return {}; }
+<script>
+  // ─── Config ───────────────────────────────────────────────
+  const LIFF_ID  = "2010375597-spCTVMCi";
+  const API_BASE = "";
+
+  // ─── Dev Switch Mode ──────────────────────────────────────
+  // Append ?dev=1 to bypass LINE login for local testing.
+  // Credentials below are test accounts — update as needed.
+  const DEV_MODE = new URLSearchParams(location.search).get("dev") === "1";
+  const DEV_ACCOUNTS = {
+    user:  { email: "user@test.com",  password: "testpass" },
+    admin: { email: "admin@test.com", password: "testpass" },
+  };
+  let _devRole = "user"; // start as user in dev mode
+
+  // ─── State ────────────────────────────────────────────────
+  let accessToken  = null;
+  let userRole     = null;
+  let userName     = null;
+  let adminFilter  = "pending";
+  let selectedType = null;   // Step 5: type tile state
+  let _flashId     = null;   // Step 10: card flash after submit
+
+  // ─── Helpers ──────────────────────────────────────────────
+  function decodeToken(t) {
+    try { return JSON.parse(atob(t.split(".")[1].replace(/-/g,"+").replace(/_/g,"/"))); }
+    catch { return {}; }
+  }
+
+  function formatDate(d) {
+    if (!d) return "—";
+    return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  function formatDateTime(d) {
+    if (!d) return "—";
+    return new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  }
+
+  // Step 2-J: Relative timestamps
+  function relativeTime(d) {
+    if (!d) return "—";
+    const diff = (Date.now() - new Date(d)) / 1000;
+    if (diff < 60)     return "just now";
+    if (diff < 3600)   return Math.floor(diff / 60) + "m ago";
+    if (diff < 86400)  return Math.floor(diff / 3600) + "h ago";
+    if (diff < 604800) return Math.floor(diff / 86400) + "d ago";
+    return formatDate(d);
+  }
+
+  function shortId(id) { return id ? "…" + id.slice(-6) : "—"; }
+
+  function statusBadge(s) {
+    const labels = { pending: "Pending", approved: "Approved", rejected: "Rejected", cancelled: "Cancelled" };
+    return `<span class="badge badge-${s}">${labels[s] || s}</span>`;
+  }
+
+  function typeTag(t) {
+    if (!t) return "";
+    const labels = { room_booking: "🏢 Room", vehicle_booking: "🚗 Vehicle", maintenance: "🔧 Maintenance", other: "📋 Other" };
+    return `<span class="tag">${labels[t] || t}</span>`;
+  }
+
+  function showToast(msg) {
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    setTimeout(() => el.classList.remove("show"), 2800);
+  }
+
+  // Step 2-C: Skeleton shimmer placeholders
+  function skeletonList(n = 3) {
+    return Array.from({ length: n }, () => `<div class="skeleton skeleton-card"></div>`).join("");
+  }
+
+  // Step 2-F: Confirm bottom sheet
+  function showConfirmSheet(title, desc, confirmLabel, confirmClass, onConfirm) {
+    const overlay = document.createElement("div");
+    overlay.className = "sheet-overlay";
+    overlay.id = "confirm-overlay";
+    overlay.innerHTML = `
+      <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-title">${escHtml(title)}</div>
+        <div class="sheet-desc">${escHtml(desc)}</div>
+        <button class="btn ${confirmClass}" id="sheet-confirm">${escHtml(confirmLabel)}</button>
+        <button class="btn btn-ghost" id="sheet-cancel" style="margin-top:8px">Keep It</button>
+      </div>`;
+    document.body.appendChild(overlay);
+    document.getElementById("sheet-confirm").onclick = () => { overlay.remove(); onConfirm(); };
+    document.getElementById("sheet-cancel").onclick  = () => overlay.remove();
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  }
+
+  // Step 2-H: Status timeline
+  function statusTimeline(r) {
+    const done   = ["approved", "rejected", "cancelled"];
+    const failed = ["rejected", "cancelled"];
+    const steps = [
+      {
+        label:  "Submitted",
+        time:   r.created_at,
+        state:  "done"
+      },
+      {
+        label:  "Under Review",
+        time:   done.includes(r.status) ? r.updated_at : null,
+        state:  r.status === "pending" ? "active" : "done"
+      },
+      {
+        label:  r.status === "approved"  ? "Approved"  :
+                r.status === "rejected"  ? "Rejected"  :
+                r.status === "cancelled" ? "Cancelled" : "Decision",
+        time:   done.includes(r.status) ? r.updated_at : null,
+        state:  r.status === "approved"  ? "done" :
+                failed.includes(r.status) ? "fail" : ""
+      }
+    ];
+    return `
+      <div class="info-block">
+        <div style="padding:14px 16px 2px">
+          <div style="font-size:12px;font-weight:600;color:var(--slate-400);text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">Progress</div>
+          <div class="timeline">
+            ${steps.map(s => `
+              <div class="tl-step">
+                <div class="tl-dot ${s.state}"></div>
+                <div>
+                  <div class="tl-label">${s.label}</div>
+                  <div class="tl-time">${s.time ? relativeTime(s.time) : "Waiting…"}</div>
+                </div>
+              </div>`).join("")}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // Step 2-I: Mark card to flash after navigation
+  function flashCard(id) { _flashId = id; }
+
+  // ── Photo upload helpers ───────────────────────────────────
+  let _pendingPhoto = null; // { file, dataUrl }
+
+  function onPhotoChange(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const MAX = 5 * 1024 * 1024;
+    if (file.size > MAX) {
+      showToast("Photo too large — max 5MB");
+      input.value = "";
+      return;
     }
-
-    function statusBadge(s) {
-      return `<span class="badge ${s}">${s.charAt(0).toUpperCase() + s.slice(1)}</span>`;
+    const allowed = ["image/jpeg", "image/png", "image/gif"];
+    if (!allowed.includes(file.type)) {
+      showToast("Only JPG, PNG, GIF allowed");
+      input.value = "";
+      return;
     }
+    _pendingPhoto = { file };
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      _pendingPhoto.dataUrl = e.target.result;
+      const area    = document.getElementById("photo-area");
+      const preview = document.getElementById("photo-preview");
+      const clear   = document.getElementById("photo-clear");
+      if (area)    area.classList.add("has-file");
+      if (preview) { preview.src = e.target.result; preview.classList.add("visible"); }
+      if (clear)   clear.classList.add("visible");
+      const label = document.getElementById("photo-label");
+      if (label)   label.textContent = file.name;
+    };
+    reader.readAsDataURL(file);
+  }
 
-    function typeBadge(t) {
-      if (!t) return "";
-      const labels = { room_booking: "Room", vehicle_booking: "Vehicle", maintenance: "Maintenance", other: "Other" };
-      return `<span class="badge type">${labels[t] || t}</span>`;
-    }
+  function clearPhoto() {
+    _pendingPhoto = null;
+    const input   = document.getElementById("photo-input");
+    const area    = document.getElementById("photo-area");
+    const preview = document.getElementById("photo-preview");
+    const clear   = document.getElementById("photo-clear");
+    const label   = document.getElementById("photo-label");
+    if (input)   input.value = "";
+    if (area)    area.classList.remove("has-file");
+    if (preview) { preview.src = ""; preview.classList.remove("visible"); }
+    if (clear)   clear.classList.remove("visible");
+    if (label)   label.textContent = "Tap to add a photo";
+  }
 
-    function shortId(id) {
-      return id ? id.slice(-8) : "";
-    }
-
-    function formatDate(d) {
-      if (!d) return "";
-      return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-    }
-
-    async function apiGet(path) {
-      const res = await fetch(`${API_BASE}${path}`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    }
-
-    async function apiPost(path, body) {
-      const res = await fetch(`${API_BASE}${path}`, {
+  async function uploadPhoto(requestId) {
+    if (!_pendingPhoto) return;
+    try {
+      const progress = document.getElementById("upload-progress");
+      if (progress) progress.classList.add("visible");
+      const form = new FormData();
+      form.append("file", _pendingPhoto.file);
+      const res = await fetch(`${API_BASE}/requests/${requestId}/attachments`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify(body)
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: form,
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast(`Photo upload failed: ${err.detail || res.status}`);
+      }
+    } catch {
+      showToast("Photo upload failed — request was saved");
+    } finally {
+      _pendingPhoto = null;
+    }
+  }
+
+  function isImageType(url) {
+    return /\.(jpg|jpeg|png|gif)$/i.test(url);
+  }
+
+  function setHeaderRole(role) {
+    const el   = document.getElementById("header-title");
+    const devBadge = DEV_MODE ? ` <span class="role-chip" style="background:rgba(255,200,0,.35);color:#fff">DEV</span>` : "";
+    const chip = `<span class="role-chip">${role === "admin" ? "Admin" : "User"}</span>`;
+    el.innerHTML = `<span>⚡</span><span>Service Portal</span>${chip}${devBadge}`;
+  }
+
+  function setHeaderActions(html) {
+    document.getElementById("header-actions").innerHTML = html;
+  }
+
+  // ─── Switch role helper ────────────────────────────────────
+  async function switchRole() {
+    if (DEV_MODE) {
+      _devRole = _devRole === "user" ? "admin" : "user";
+      showToast(`⇄ Switched to ${_devRole} view`);
+      await devLogin(_devRole);
+    } else {
+      if (userRole === "admin") {
+        const chipEl = document.getElementById("header-title").querySelector(".role-chip");
+        const currentView = chipEl ? chipEl.textContent.toLowerCase() : "admin";
+        if (currentView === "admin") {
+          setHeaderRole("user");
+          setHeaderActions(`
+            <button class="icon-btn" onclick="switchRole()" title="Switch view">⇄</button>
+            <button class="icon-btn" onclick="renderUserDashboard()" title="Refresh">↻</button>`);
+          renderUserDashboard();
+        } else {
+          setHeaderRole("admin");
+          setHeaderActions(`
+            <button class="icon-btn" onclick="switchRole()" title="Switch view">⇄</button>
+            <button class="icon-btn" onclick="renderAdminDashboard()" title="Refresh">↻</button>`);
+          renderAdminDashboard();
+        }
+      }
+    }
+  }
+
+  async function devLogin(role) {
+    const creds = DEV_ACCOUNTS[role];
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(creds),
+    });
+    if (!res.ok) throw new Error("Dev login failed — check DEV_ACCOUNTS credentials");
+    const data    = await res.json();
+    accessToken   = data.access_token;
+    const payload = decodeToken(accessToken);
+    userRole      = payload.role || role;
+    userName      = payload.full_name || payload.sub || null;
+    setHeaderRole(userRole);
+    if (userRole === "admin") {
+      setHeaderActions(`
+        <button class="icon-btn" onclick="switchRole()" title="Switch role">⇄</button>
+        <button class="icon-btn" onclick="renderAdminDashboard()" title="Refresh">↻</button>`);
+      renderAdminDashboard();
+    } else {
+      setHeaderActions(`
+        <button class="icon-btn" onclick="switchRole()" title="Switch role">⇄</button>
+        <button class="icon-btn" onclick="renderUserDashboard()" title="Refresh">↻</button>`);
+      renderUserDashboard();
+    }
+  }
+
+  // ─── API ──────────────────────────────────────────────────
+  async function api(method, path, body) {
+    const opts = { method, headers: { Authorization: `Bearer ${accessToken}` } };
+    if (body !== undefined) {
+      opts.headers["Content-Type"] = "application/json";
+      opts.body = JSON.stringify(body);
+    }
+    const res = await fetch(`${API_BASE}${path}`, opts);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+  const apiGet   = (p)    => api("GET",   p);
+  const apiPost  = (p, b) => api("POST",  p, b);
+  const apiPatch = (p, b) => api("PATCH", p, b);
+
+  // ─── INIT ─────────────────────────────────────────────────
+  async function init() {
+    // ── Dev Switch Mode: skip LIFF, use password login ──────
+    if (DEV_MODE) {
+      try {
+        await devLogin(_devRole);
+      } catch (e) {
+        document.getElementById("app").innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">🛠️</div>
+            <h3>Dev login failed</h3>
+            <p style="font-size:12px;word-break:break-all">${escHtml(e.message)}</p>
+            <p style="margin-top:8px;font-size:12px;color:var(--slate-400)">Check DEV_ACCOUNTS in liff-app.html and ensure the backend is running.</p>
+            <button class="btn-retry" onclick="init()">↻ Retry</button>
+          </div>`;
+      }
+      return;
     }
 
-    async function apiPatch(path, body) {
-      const res = await fetch(`${API_BASE}${path}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify(body)
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.json();
-    }
-
-    // ─────────────────────────── INIT ───────────────────────────
-
-    async function init() {
+    // ── Production: LINE LIFF login ──────────────────────────
+    try {
       await liff.init({ liffId: LIFF_ID, withLoginOnExternalBrowser: true });
       if (!liff.isLoggedIn()) { liff.login(); return; }
 
@@ -112,224 +758,608 @@
       const res = await fetch(`${API_BASE}/auth/line`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ access_token: lineToken })
+        body: JSON.stringify({ access_token: lineToken }),
       });
-      const data = await res.json();
-      accessToken = data.access_token;
-      const payload = decodeToken(accessToken);
-      userRole = payload.role || "user";
+      if (!res.ok) throw new Error("Auth failed");
+      const data     = await res.json();
+      accessToken    = data.access_token;
+      const payload  = decodeToken(accessToken);
+      userRole       = payload.role || "user";
+      userName       = payload.full_name || payload.sub || null;
+
+      setHeaderRole(userRole);
 
       if (userRole === "admin") {
+        setHeaderActions(`
+          <button class="icon-btn" onclick="switchRole()" title="Switch view">⇄</button>
+          <button class="icon-btn" onclick="renderAdminDashboard()" title="Refresh">↻</button>`);
         renderAdminDashboard();
       } else {
-        renderRequests();
+        setHeaderActions(`<button class="icon-btn" onclick="renderUserDashboard()" title="Refresh">↻</button>`);
+        renderUserDashboard();
       }
-    }
-
-    // ══════════════════════════ USER VIEWS ══════════════════════════
-
-    async function renderRequests() {
-      const app = document.getElementById("app");
-      app.innerHTML = "<div class='empty'>Loading requests...</div>";
-      try {
-        const data = await apiGet("/requests/me");
-        const list = data.requests || data;
-        if (!list.length) {
-          app.innerHTML = `
-            <div class="empty">No requests yet 📋</div>
-            <button class="btn primary" onclick="renderNewRequest()">➕ New Request</button>`;
-          return;
-        }
-        app.innerHTML = list.map(r => `
-          <div class="card" onclick="renderRequestDetail('${r.id}')" style="cursor:pointer">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <strong>${r.title}</strong>
-              ${statusBadge(r.status)}
-            </div>
-            <div class="meta">
-              ${typeBadge(r.request_type)}
-              <span>${formatDate(r.created_at)}</span>
-            </div>
-            <p>${r.description || ""}</p>
-          </div>`).join("") +
-          `<button class="btn primary" onclick="renderNewRequest()">➕ New Request</button>`;
-      } catch(e) {
-        app.innerHTML = `<div class="card">Failed to load requests.</div>`;
-      }
-    }
-
-    async function renderRequestDetail(id) {
-      const app = document.getElementById("app");
-      app.innerHTML = "<div class='empty'>Loading...</div>";
-      try {
-        const r = await apiGet(`/requests/${id}`);
-        app.innerHTML = `
-          <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-              <strong style="font-size:16px">${r.title}</strong>
-              ${statusBadge(r.status)}
-            </div>
-            <div class="meta">${typeBadge(r.request_type)} <span>${formatDate(r.created_at)}</span></div>
-            ${r.description ? `<p style="margin-top:10px">${r.description}</p>` : ""}
-            ${r.admin_note ? `<div class="admin-note"><strong>Admin note</strong><br>${r.admin_note}</div>` : ""}
-          </div>
-          ${r.status === "pending" ? `<button class="btn danger" onclick="cancelRequest('${r.id}')">Cancel Request</button>` : ""}
-          <button class="btn secondary" onclick="renderRequests()">← Back</button>`;
-      } catch(e) {
-        app.innerHTML = `<div class="card">Failed to load request.</div><button class="btn secondary" onclick="renderRequests()">← Back</button>`;
-      }
-    }
-
-    async function cancelRequest(id) {
-      const btn = document.querySelector(".btn.danger");
-      btn.textContent = "Cancelling..."; btn.disabled = true;
-      try {
-        await apiPatch(`/requests/${id}/cancel`, {});
-        renderRequests();
-      } catch(e) {
-        alert("Failed to cancel request.");
-        btn.textContent = "Cancel Request"; btn.disabled = false;
-      }
-    }
-
-    async function renderNewRequest() {
-      const app = document.getElementById("app");
-      app.innerHTML = `
-        <div class="card">
-          <h3 style="margin-bottom:12px">New Request</h3>
-          <label>Title *</label>
-          <input id="title" placeholder="Enter title" />
-          <div class="error-msg" id="title-error">Title is required</div>
-          <label>Request Type *</label>
-          <select id="request-type">
-            <option value="">Select type...</option>
-            <option value="room_booking">Room Booking</option>
-            <option value="vehicle_booking">Vehicle Booking</option>
-            <option value="maintenance">Maintenance</option>
-            <option value="other">Other</option>
-          </select>
-          <label>Description</label>
-          <textarea id="desc" rows="3" placeholder="Enter description"></textarea>
-          <button class="btn primary" id="submit-btn" onclick="submitRequest()">Submit</button>
-          <button class="btn secondary" onclick="renderRequests()">Cancel</button>
+    } catch {
+      document.getElementById("app").innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">⚠️</div>
+          <h3>Could not sign in</h3>
+          <p>Please close and reopen this page to try again.</p>
+          <button class="btn-retry" onclick="init()">↻ Retry</button>
         </div>`;
     }
+  }
 
-    async function submitRequest() {
-      const title = document.getElementById("title").value.trim();
-      const requestType = document.getElementById("request-type").value;
-      const desc = document.getElementById("desc").value.trim();
-      const errEl = document.getElementById("title-error");
-      const btn = document.getElementById("submit-btn");
+  // ══════════════════════════ USER VIEWS ══════════════════════════
 
-      if (!title) { errEl.style.display = "block"; return; }
-      errEl.style.display = "none";
-      btn.textContent = "Submitting..."; btn.disabled = true;
+  // Step 3: Updated renderUserDashboard — skeleton, grouping, retry
+  async function renderUserDashboard() {
+    const app = document.getElementById("app");
+    // Step 3 — skeleton loading
+    app.innerHTML = skeletonList(3);
+    app.className = "page pb-fab";
+    try {
+      const data = await apiGet("/requests/me");
+      const list = Array.isArray(data) ? data : (data.requests || []);
 
-      try {
-        await apiPost("/requests", { title, description: desc, request_type: requestType || null, resource_id: null });
-        renderRequests();
-      } catch(e) {
-        alert("Failed to create request.");
-        btn.textContent = "Submit"; btn.disabled = false;
-      }
-    }
-
-    // ══════════════════════════ ADMIN VIEWS ══════════════════════════
-
-    let adminFilter = "pending";
-
-    async function renderAdminDashboard() {
-      const app = document.getElementById("app");
-      app.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div class="tabs" style="flex:1;margin-bottom:0">
-            <div class="tab ${adminFilter === "pending" ? "active" : ""}" onclick="switchAdminTab('pending')">Pending</div>
-            <div class="tab ${adminFilter === "all" ? "active" : ""}" onclick="switchAdminTab('all')">All</div>
-          </div>
-          <button class="btn small primary" onclick="renderAdminDashboard()" style="margin:0 0 0 8px;width:auto">↻</button>
-        </div>
-        <div id="admin-list"><div class="empty">Loading...</div></div>`;
-      await loadAdminList();
-    }
-
-    function switchAdminTab(tab) {
-      adminFilter = tab;
-      renderAdminDashboard();
-    }
-
-    async function loadAdminList() {
-      const el = document.getElementById("admin-list");
-      try {
-        const query = adminFilter === "pending" ? "?status=pending" : "";
-        const data = await apiGet(`/admin/requests${query}`);
-        const list = data.requests || data;
-        if (!list.length) {
-          el.innerHTML = "<div class='empty'>No requests found</div>";
-          return;
-        }
-        el.innerHTML = list.map(r => `
-          <div class="card" onclick="renderAdminRequestDetail('${r.id}')" style="cursor:pointer">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <strong>${r.title}</strong>
-              ${statusBadge(r.status)}
-            </div>
-            <div class="meta">
-              ${typeBadge(r.request_type)}
-              <span>${shortId(r.user_id)}</span>
-              <span>${formatDate(r.created_at)}</span>
-            </div>
-          </div>`).join("");
-      } catch(e) {
-        el.innerHTML = "<div class='card'>Failed to load requests.</div>";
-      }
-    }
-
-    async function renderAdminRequestDetail(id) {
-      const app = document.getElementById("app");
-      app.innerHTML = "<div class='empty'>Loading...</div>";
-      try {
-        const r = await apiGet(`/admin/requests/${id}`);
+      if (!list.length) {
+        // Step 3 — improved empty state with inline button
         app.innerHTML = `
-          <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-              <strong style="font-size:16px">${r.title}</strong>
-              ${statusBadge(r.status)}
-            </div>
-            <div class="meta">${typeBadge(r.request_type)} <span>User: ${shortId(r.user_id)}</span></div>
-            ${r.description ? `<p style="margin-top:10px">${r.description}</p>` : ""}
-            ${r.admin_note ? `<div class="admin-note"><strong>Admin note</strong><br>${r.admin_note}</div>` : ""}
+          <div class="empty-state">
+            <div class="empty-icon">📋</div>
+            <h3>No requests yet</h3>
+            <p>Submit your first service request below.</p>
+            <button class="btn btn-primary" style="margin-top:16px;max-width:220px"
+                    onclick="renderNewRequest()">＋ New Request</button>
+          </div>`;
+      } else {
+        const pending = list.filter(r => r.status === "pending");
+        const others  = list.filter(r => r.status !== "pending");
+        let html = "";
+
+        if (pending.length) {
+          html += `<div class="section-hd"><h2>Active</h2><span class="count-chip">${pending.length}</span></div>`;
+          html += pending.map(r => userCard(r)).join("");
+        }
+        if (others.length) {
+          html += `
+            <div class="section-hd" style="margin-top:${pending.length ? 20 : 0}px">
+              <h2>History</h2>
+              <button class="btn btn-ghost btn-sm" onclick="clearUserHistory()" style="margin:0;padding:6px 12px;font-size:11px;width:auto">Clear History</button>
+            </div>`;
+          html += others.map(r => userCard(r)).join("");
+        }
+        app.innerHTML = html;
+
+        // Step 10 — flash newly created card
+        if (_flashId) {
+          const el = document.querySelector(`[data-id="${_flashId}"]`);
+          if (el) el.classList.add("flash");
+          _flashId = null;
+        }
+      }
+
+      // FAB
+      if (!document.getElementById("fab")) {
+        const fab = document.createElement("button");
+        fab.id = "fab";
+        fab.className = "fab";
+        fab.innerHTML = `<span>＋</span> New Request`;
+        fab.onclick = renderNewRequest;
+        document.body.appendChild(fab);
+      }
+    } catch {
+      // Step 3 — error state with retry button
+      app.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">⚠️</div>
+          <h3>Could not load requests</h3>
+          <p>Check your connection and try again.</p>
+          <button class="btn-retry" onclick="renderUserDashboard()">↻ Retry</button>
+        </div>`;
+    }
+  }
+
+  async function clearUserHistory() {
+    showConfirmSheet(
+      "Clear History",
+      "Are you sure you want to clear your completed request history? This will hide all done and cancelled requests.",
+      "Clear It",
+      "btn-danger",
+      async () => {
+        try {
+          await apiPost("/requests/archive");
+          showToast("✓ History cleared");
+          renderUserDashboard();
+        } catch {
+          showToast("Failed to clear history");
+        }
+      }
+    );
+  }
+
+  // Step 3 — userCard with data-status (border accent), relativeTime, data-id for flash
+  function userCard(r) {
+    return `
+      <div class="card clickable${r.id === _flashId ? " flash" : ""}"
+           data-status="${r.status}"
+           data-id="${r.id}"
+           onclick="renderRequestDetail('${r.id}')">
+        <div class="card-row">
+          <span class="card-title">${escHtml(r.title)}</span>
+          <span class="card-arrow">›</span>
+        </div>
+        <div class="card-meta">
+          ${statusBadge(r.status)}
+          ${typeTag(r.request_type)}
+          <span class="card-date">${relativeTime(r.created_at)}</span>
+        </div>
+        ${r.description ? `<p class="card-desc">${escHtml(r.description)}</p>` : ""}
+      </div>`;
+  }
+
+  // Step 4: renderRequestDetail — adds timeline, confirm sheet for cancel
+  async function renderRequestDetail(id) {
+    const app = document.getElementById("app");
+    removeFab();
+    app.className = "page";
+    app.innerHTML = `<div class="loader"><div class="spinner"></div><p class="loader-text">Loading…</p></div>`;
+    try {
+      const r = await apiGet(`/requests/${id}`);
+      const canCancel = r.status === "pending";
+
+      app.innerHTML = `
+        <button class="back-btn" onclick="renderUserDashboard()">‹ Back</button>
+
+        <div class="detail-hero">
+          <div class="detail-hero-title">${escHtml(r.title)}</div>
+          <div class="detail-hero-meta">
+            ${statusBadge(r.status)}
+            ${typeTag(r.request_type)}
           </div>
-          ${r.status === "pending" ? `
-            <div class="card">
-              <label>Admin Note</label>
-              <textarea id="admin-note" rows="2" placeholder="Optional note...">${r.admin_note || ""}</textarea>
-              <button class="btn primary" id="approve-btn" onclick="adminAction('${r.id}','approved')">Approve</button>
-              <button class="btn danger" id="reject-btn" onclick="adminAction('${r.id}','rejected')">Reject</button>
-            </div>` : ""}
-          <button class="btn secondary" onclick="renderAdminDashboard()">← Back</button>`;
-      } catch(e) {
-        app.innerHTML = `<div class="card">Failed to load request.</div><button class="btn secondary" onclick="renderAdminDashboard()">← Back</button>`;
-      }
-    }
+        </div>
 
-    async function adminAction(id, status) {
-      const note = document.getElementById("admin-note")?.value?.trim() || "";
-      const approveBtn = document.getElementById("approve-btn");
-      const rejectBtn = document.getElementById("reject-btn");
-      if (approveBtn) { approveBtn.textContent = "Processing..."; approveBtn.disabled = true; }
-      if (rejectBtn) { rejectBtn.textContent = "Processing..."; rejectBtn.disabled = true; }
-      try {
-        await apiPatch(`/admin/requests/${id}/status`, { status, admin_note: note });
-        renderAdminDashboard();
-      } catch(e) {
-        alert("Action failed.");
-        if (approveBtn) { approveBtn.textContent = "Approve"; approveBtn.disabled = false; }
-        if (rejectBtn) { rejectBtn.textContent = "Reject"; rejectBtn.disabled = false; }
-      }
-    }
+        ${statusTimeline(r)}
 
-    init();
-  </script>
+        <div class="info-block">
+          <div class="info-row">
+            <span class="info-key">Created</span>
+            <span class="info-val">${formatDateTime(r.created_at)}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Updated</span>
+            <span class="info-val">${formatDateTime(r.updated_at)}</span>
+          </div>
+          ${r.start_time ? `
+          <div class="info-row">
+            <span class="info-key">From</span>
+            <span class="info-val">${formatDateTime(r.start_time)}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Until</span>
+            <span class="info-val">${formatDateTime(r.end_time)}</span>
+          </div>` : ""}
+          ${r.description ? `
+          <div class="info-row">
+            <span class="info-key">Details</span>
+            <span class="info-val">${escHtml(r.description)}</span>
+          </div>` : ""}
+        </div>
+
+        ${r.admin_note ? `
+        <div class="admin-note-box">
+          <div class="note-label">📝 Admin Note</div>
+          <p>${escHtml(r.admin_note)}</p>
+        </div>` : ""}
+
+        <div id="attachments-section"></div>
+
+        ${canCancel ? `
+        <button class="btn btn-danger" id="cancel-btn"
+          onclick="showConfirmSheet(
+            'Cancel this request?',
+            'This cannot be undone. Your pending request will be cancelled.',
+            'Yes, Cancel It',
+            'btn-danger',
+            () => doCancel('${r.id}')
+          )">
+          Cancel Request
+        </button>` : ""}`;
+      // Load attachments after main content renders
+      loadAttachments(r.id);
+    } catch {
+      app.innerHTML = `
+        <button class="back-btn" onclick="renderUserDashboard()">‹ Back</button>
+        <div class="empty-state">
+          <div class="empty-icon">⚠️</div>
+          <h3>Could not load request</h3>
+          <button class="btn-retry" onclick="renderRequestDetail('${id}')">↻ Retry</button>
+        </div>`;
+    }
+  }
+
+  async function loadAttachments(requestId) {
+    const el = document.getElementById("attachments-section");
+    if (!el) return;
+    try {
+      const list = await apiGet(`/requests/${requestId}/attachments`);
+      if (!list || !list.length) return;
+      const imgs  = list.filter(a => isImageType(a.file_url));
+      const files = list.filter(a => !isImageType(a.file_url));
+      let html = `<div class="info-block" style="margin-bottom:12px"><div style="padding:14px 16px 10px"><div style="font-size:12px;font-weight:600;color:var(--slate-400);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px">Attachments (${list.length})</div>`;
+      if (imgs.length) {
+        html += `<div class="attachment-grid">${imgs.map(a =>
+          `<img class="attachment-img" src="${escHtml(a.file_url)}" alt="${escHtml(a.filename)}" onclick="window.open('${escHtml(a.file_url)}','_blank')" />`
+        ).join("")}</div>`;
+      }
+      if (files.length) {
+        html += files.map(a =>
+          `<a class="attachment-file" href="${escHtml(a.file_url)}" target="_blank" rel="noopener">📄 ${escHtml(a.filename)}</a>`
+        ).join("");
+      }
+      html += `</div></div>`;
+      el.innerHTML = html;
+    } catch { /* silent — attachments are optional */ }
+  }
+
+  async function doCancel(id) {
+    showToast("Cancelling…");
+    try {
+      await apiPatch(`/requests/${id}/cancel`, {});
+      showToast("Request cancelled");
+      renderUserDashboard();
+    } catch {
+      showToast("Could not cancel — try again");
+    }
+  }
+
+  // Step 5: renderNewRequest — type tile grid + photo upload
+  function renderNewRequest() {
+    const app = document.getElementById("app");
+    removeFab();
+    selectedType = null;
+    _pendingPhoto = null;
+    app.className = "page";
+    app.innerHTML = `
+      <button class="back-btn" onclick="renderUserDashboard()">‹ Back</button>
+
+      <div class="card">
+        <div style="font-size:16px;font-weight:700;color:var(--slate-800);margin-bottom:4px">New Request</div>
+        <p style="font-size:13px;color:var(--slate-400)">What do you need help with?</p>
+
+        <div class="form-group">
+          <label class="form-label">Request Type</label>
+          <div class="type-grid">
+            ${[
+              { v: "room_booking",    icon: "🏢", label: "Room" },
+              { v: "vehicle_booking", icon: "🚗", label: "Vehicle" },
+              { v: "maintenance",     icon: "🔧", label: "Maintenance" },
+              { v: "other",           icon: "📋", label: "Other" }
+            ].map(t => `
+              <div class="type-tile" data-val="${t.v}" onclick="selectType('${t.v}')">
+                <span class="type-tile-icon">${t.icon}</span>
+                <span class="type-tile-label">${t.label}</span>
+              </div>`).join("")}
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="req-title">Title <span class="req">*</span></label>
+          <input class="form-control" id="req-title" placeholder="e.g. Meeting Room for Monday standup" />
+          <p class="form-error" id="title-err">Please enter a title</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="req-desc">Description</label>
+          <textarea class="form-control" id="req-desc" placeholder="Any extra details…"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Photo (optional)</label>
+          <input type="file" id="photo-input" accept="image/jpeg,image/png,image/gif"
+                 style="display:none" onchange="onPhotoChange(this)" />
+          <div class="photo-upload-area" id="photo-area"
+               onclick="document.getElementById('photo-input').click()">
+            <span class="photo-upload-icon">📷</span>
+            <span class="photo-upload-text" id="photo-label">Tap to add a photo</span>
+            <span class="photo-upload-hint">JPG, PNG, GIF · Max 5MB</span>
+            <img class="photo-preview" id="photo-preview" alt="preview" />
+          </div>
+          <button class="photo-clear" id="photo-clear" onclick="clearPhoto()" type="button">
+            ✕ Remove photo
+          </button>
+        </div>
+
+        <div class="upload-progress" id="upload-progress"><div class="upload-bar"></div></div>
+
+        <button class="btn btn-primary" id="submit-btn" onclick="submitRequest()" style="margin-top:18px">
+          Submit Request
+        </button>
+        <button class="btn btn-ghost" onclick="renderUserDashboard()">Cancel</button>
+      </div>`;
+
+    document.getElementById("req-title").focus();
+  }
+
+  // Step 5: Type tile selection handler
+  function selectType(val) {
+    selectedType = val;
+    document.querySelectorAll(".type-tile").forEach(t => {
+      t.classList.toggle("selected", t.dataset.val === val);
+    });
+  }
+
+  // Step 10: submitRequest — captures response, triggers flash, uploads photo
+  async function submitRequest() {
+    const titleEl = document.getElementById("req-title");
+    const title   = titleEl.value.trim();
+    const desc    = document.getElementById("req-desc").value.trim();
+    const errEl   = document.getElementById("title-err");
+    const btn     = document.getElementById("submit-btn");
+
+    if (!title) {
+      errEl.classList.add("visible");
+      titleEl.classList.add("error");
+      titleEl.focus();
+      return;
+    }
+    errEl.classList.remove("visible");
+    titleEl.classList.remove("error");
+
+    const hasPhoto = !!_pendingPhoto;
+    btn.innerHTML = `<div class="spinner spinner-sm"></div> Submitting…`;
+    btn.disabled = true;
+
+    try {
+      const newReq = await apiPost("/requests", {
+        title,
+        description: desc || null,
+        request_type: selectedType || null,
+        resource_id: null,
+      });
+
+      // Upload photo if one was selected
+      if (hasPhoto) {
+        btn.innerHTML = `<div class="spinner spinner-sm"></div> Uploading photo…`;
+        await uploadPhoto(newReq.id);
+      }
+
+      flashCard(newReq.id);
+      selectedType = null;
+      showToast(hasPhoto ? "✓ Request + photo submitted!" : "✓ Request submitted!");
+      renderUserDashboard();
+    } catch {
+      showToast("Failed to submit — try again");
+      btn.innerHTML = "Submit Request";
+      btn.disabled = false;
+    }
+  }
+
+  // ══════════════════════════ ADMIN VIEWS ══════════════════════════
+
+  // Step 6: renderAdminDashboard — pending count badge, skeleton loading
+  async function renderAdminDashboard() {
+    const app = document.getElementById("app");
+    removeFab();
+    app.className = "page";
+
+    // Show tabs immediately with skeleton list
+    app.innerHTML = `
+      <div class="tabs" id="admin-tabs">
+        <div class="tab ${adminFilter==="pending"?"active":""}" onclick="switchAdminTab('pending')">⏳ Pending</div>
+        <div class="tab ${adminFilter==="approved"?"active":""}" onclick="switchAdminTab('approved')">✅ Done</div>
+        <div class="tab ${adminFilter==="all"?"active":""}" onclick="switchAdminTab('all')">All</div>
+      </div>
+      <div id="admin-list">${skeletonList(4)}</div>`;
+
+    // Step 6 — fetch pending count for tab badge (parallel with list load)
+    const [,] = await Promise.all([
+      updatePendingBadge(),
+      loadAdminList()
+    ]);
+  }
+
+  async function updatePendingBadge() {
+    try {
+      const pd = await apiGet("/admin/requests?status=pending&limit=100");
+      const pl = Array.isArray(pd) ? pd : (pd.requests || []);
+      const tab = document.querySelector(".tab:first-child");
+      if (tab) tab.textContent = pl.length ? `⏳ Pending (${pl.length})` : "⏳ Pending";
+    } catch { /* silent */ }
+  }
+
+  function switchAdminTab(tab) {
+    adminFilter = tab;
+    renderAdminDashboard();
+  }
+
+  // Step 9: loadAdminList — sort pending oldest-first (FIFO)
+  async function loadAdminList() {
+    const el = document.getElementById("admin-list");
+    if (!el) return;
+    try {
+      const q    = adminFilter !== "all" ? `?status=${adminFilter}` : "";
+      const data = await apiGet(`/admin/requests${q}`);
+      let list   = Array.isArray(data) ? data : (data.requests || []);
+
+      // Step 9 — FIFO: oldest pending first
+      if (adminFilter === "pending") {
+        list = [...list].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      }
+
+      if (!list.length) {
+        el.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">${adminFilter === "pending" ? "🎉" : "📭"}</div>
+            <h3>${adminFilter === "pending" ? "All clear!" : "Nothing here"}</h3>
+            <p>${adminFilter === "pending" ? "No pending requests right now." : "No requests match this filter."}</p>
+          </div>`;
+        return;
+      }
+
+      const label = adminFilter === "pending" ? "Pending Review" : adminFilter === "approved" ? "Approved" : "All Requests";
+      el.innerHTML = `
+        <div class="section-hd">
+          <h2>${label}</h2>
+          <span class="count-chip">${list.length}</span>
+        </div>` +
+        list.map(r => adminCard(r)).join("");
+    } catch {
+      el.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">⚠️</div>
+          <h3>Could not load requests</h3>
+          <button class="btn-retry" onclick="loadAdminList()">↻ Retry</button>
+        </div>`;
+    }
+  }
+
+  // Step 7: adminCard — data-status border, full name, relativeTime
+  function adminCard(r) {
+    const name = r.full_name ? escHtml(r.full_name) : shortId(r.user_id);
+    return `
+      <div class="card clickable" data-status="${r.status}" onclick="renderAdminDetail('${r.id}')">
+        <div class="card-row">
+          <span class="card-title">${escHtml(r.title)}</span>
+          <span class="card-arrow">›</span>
+        </div>
+        <div class="card-meta">
+          ${statusBadge(r.status)}
+          ${typeTag(r.request_type)}
+          <span class="user-chip">👤 ${name}</span>
+          <span class="card-date">${relativeTime(r.created_at)}</span>
+        </div>
+      </div>`;
+  }
+
+  async function renderAdminDetail(id) {
+    const app = document.getElementById("app");
+    app.className = "page";
+    app.innerHTML = `<div class="loader"><div class="spinner"></div><p class="loader-text">Loading…</p></div>`;
+    try {
+      const r = await apiGet(`/admin/requests/${id}`);
+      const isPending = r.status === "pending";
+      const name = r.full_name ? escHtml(r.full_name) : shortId(r.user_id);
+
+      app.innerHTML = `
+        <button class="back-btn" onclick="renderAdminDashboard()">‹ Dashboard</button>
+
+        <div class="detail-hero">
+          <div class="detail-hero-title">${escHtml(r.title)}</div>
+          <div class="detail-hero-meta">
+            ${statusBadge(r.status)}
+            ${typeTag(r.request_type)}
+          </div>
+        </div>
+
+        <div class="info-block">
+          <div class="info-row">
+            <span class="info-key">From</span>
+            <span class="info-val">${name}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Submitted</span>
+            <span class="info-val">${formatDateTime(r.created_at)} · ${relativeTime(r.created_at)}</span>
+          </div>
+          ${r.start_time ? `
+          <div class="info-row">
+            <span class="info-key">Start</span>
+            <span class="info-val">${formatDateTime(r.start_time)}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">End</span>
+            <span class="info-val">${formatDateTime(r.end_time)}</span>
+          </div>` : ""}
+          ${r.description ? `
+          <div class="info-row">
+            <span class="info-key">Details</span>
+            <span class="info-val">${escHtml(r.description)}</span>
+          </div>` : ""}
+        </div>
+
+        ${r.admin_note && !isPending ? `
+        <div class="admin-note-box">
+          <div class="note-label">📝 Admin Note</div>
+          <p>${escHtml(r.admin_note)}</p>
+        </div>` : ""}
+
+        ${isPending ? `
+        <div class="card">
+          <div style="font-size:13px;font-weight:700;color:var(--slate-700);margin-bottom:10px">Admin Decision</div>
+          <label class="form-label" for="admin-note-inp">Note for requester (optional)</label>
+          <textarea class="form-control" id="admin-note-inp" rows="2"
+            placeholder="Add a note…">${r.admin_note || ""}</textarea>
+
+          <!-- Step 8 — preset note chips -->
+          <div style="margin-top:6px;font-size:11px;font-weight:600;color:var(--slate-400);text-transform:uppercase;letter-spacing:.4px">Quick notes</div>
+          <div class="chip-group">
+            ${["Resource unavailable","Duplicate request","Need more details","Out of working hours"].map(c =>
+              `<div class="chip" onclick="applyChip(this,'${escHtml(c)}')">${c}</div>`
+            ).join("")}
+          </div>
+
+          <div class="btn-row" style="margin-top:14px">
+            <button class="btn btn-primary" id="approve-btn" onclick="adminAction('${r.id}','approved')">
+              ✓ Approve
+            </button>
+            <button class="btn btn-danger" id="reject-btn" onclick="adminAction('${r.id}','rejected')">
+              ✕ Reject
+            </button>
+          </div>
+        </div>` : ""}`;
+    } catch {
+      app.innerHTML = `
+        <button class="back-btn" onclick="renderAdminDashboard()">‹ Dashboard</button>
+        <div class="empty-state">
+          <div class="empty-icon">⚠️</div>
+          <h3>Could not load request</h3>
+          <button class="btn-retry" onclick="renderAdminDetail('${id}')">↻ Retry</button>
+        </div>`;
+    }
+  }
+
+  // Step 8: Preset chip handler
+  function applyChip(el, text) {
+    const ta = document.getElementById("admin-note-inp");
+    ta.value = text;
+    ta.focus();
+    document.querySelectorAll(".chip").forEach(c => c.classList.remove("selected"));
+    el.classList.add("selected");
+  }
+
+  async function adminAction(id, status) {
+    const note       = document.getElementById("admin-note-inp")?.value?.trim() || "";
+    const approveBtn = document.getElementById("approve-btn");
+    const rejectBtn  = document.getElementById("reject-btn");
+    if (approveBtn) { approveBtn.disabled = true; approveBtn.innerHTML = `<div class="spinner spinner-sm"></div>`; }
+    if (rejectBtn)  { rejectBtn.disabled  = true; }
+    try {
+      await apiPatch(`/admin/requests/${id}/status`, { status, admin_note: note });
+      showToast(`✓ Request ${status}`);
+      renderAdminDashboard();
+    } catch {
+      showToast("Action failed — try again");
+      if (approveBtn) { approveBtn.disabled = false; approveBtn.innerHTML = "✓ Approve"; }
+      if (rejectBtn)  { rejectBtn.disabled  = false; }
+    }
+  }
+
+  // ─── Utility ──────────────────────────────────────────────
+  function removeFab() {
+    const f = document.getElementById("fab");
+    if (f) f.remove();
+  }
+
+  function escHtml(s) {
+    if (!s) return "";
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  // ─── Boot ─────────────────────────────────────────────────
+  init();
+</script>
 </body>
 </html>
