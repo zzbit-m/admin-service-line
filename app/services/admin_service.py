@@ -79,6 +79,25 @@ async def get_request_by_id(db: AsyncSession, request_id: UUID) -> ServiceReques
     sr = result.scalar_one_or_none()
     if sr is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Request not found")
+    
+    # Fetch overlapping approved request conflicts for pending bookings
+    conflicts = []
+    if sr.resource_id and sr.start_time and sr.end_time and sr.status == "pending":
+        conflict_query = (
+            select(ServiceRequest)
+            .options(selectinload(ServiceRequest.user))
+            .where(
+                ServiceRequest.resource_id == sr.resource_id,
+                ServiceRequest.status == "approved",
+                ServiceRequest.start_time < sr.end_time,
+                ServiceRequest.end_time > sr.start_time,
+                ServiceRequest.id != sr.id
+            )
+        )
+        conflict_res = await db.execute(conflict_query)
+        conflicts = list(conflict_res.scalars().all())
+    
+    sr.conflicts = conflicts
     return sr
 
 

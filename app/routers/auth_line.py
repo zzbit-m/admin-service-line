@@ -74,4 +74,11 @@ async def line_login(body: LineAuthRequest, db: AsyncSession = Depends(get_db)):
         user = insert.fetchone()
 
     token = create_access_token({"sub": str(user.id), "role": user.role})
+    
+    try:
+        from app.routers.webhook import update_user_rich_menu
+        await update_user_rich_menu(line_user_id, user.role == "admin")
+    except Exception as e:
+        print(f"Error updating rich menu on login: {e}")
+
     return {"access_token": token, "token_type": "bearer"}

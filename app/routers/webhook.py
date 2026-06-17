@@ -37,6 +37,30 @@ async def get_line_profile(user_id: str) -> dict:
         print(f"Error fetching LINE bot profile for {user_id}: {e}")
     return {}
 
+async def update_user_rich_menu(line_user_id: str, is_admin: bool):
+    if not settings.LINE_ADMIN_RICH_MENU_ID:
+        print("[update_user_rich_menu] LINE_ADMIN_RICH_MENU_ID is not configured, skipping link/unlink")
+        return
+    try:
+        async with httpx.AsyncClient() as client:
+            if is_admin:
+                resp = await client.post(
+                    f"https://api.line.me/v2/bot/user/{line_user_id}/richmenu/{settings.LINE_ADMIN_RICH_MENU_ID}",
+                    headers={"Authorization": f"Bearer {settings.LINE_MESSAGING_ACCESS_TOKEN}"},
+                    timeout=3.0
+                )
+                print(f"[update_user_rich_menu] Link admin menu for {line_user_id}: {resp.status_code}")
+            else:
+                resp = await client.delete(
+                    f"https://api.line.me/v2/bot/user/{line_user_id}/richmenu",
+                    headers={"Authorization": f"Bearer {settings.LINE_MESSAGING_ACCESS_TOKEN}"},
+                    timeout=3.0
+                )
+                print(f"[update_user_rich_menu] Unlink custom menu for {line_user_id}: {resp.status_code}")
+    except Exception as e:
+        print(f"Error updating rich menu for user {line_user_id}: {e}")
+
+
 @router.post("/webhook/line")
 async def line_webhook(request: Request):
     body = await request.body()
@@ -89,6 +113,9 @@ async def line_webhook(request: Request):
                                     is_admin = True
                     except Exception as e:
                         print(f"Error checking DB profile: {e}")
+
+                    # Sync their rich menu dynamically
+                    await update_user_rich_menu(line_user_id, is_admin)
 
                 # Build menu options
                 contents_list = [
@@ -1014,7 +1041,7 @@ async def line_webhook(request: Request):
                         except Exception as ex:
                             print(f"Error sending n8n webhook: {ex}")
                         
-                        # Enqueue LINE notification for the requester
+                        # Enqueue LINE notification for the requester and admin
                         try:
                             pool = request.app.state.arq_pool
                             status_messages = {
@@ -1022,6 +1049,14 @@ async def line_webhook(request: Request):
                                 "rejected": "❌ Your request has been rejected.",
                             }
                             await pool.enqueue_job("send_notification", str(result.user_id), status_messages[new_status], str(req_uuid))
+
+                            # Notify processing admin
+                            if admin_user and admin_user.line_user_id:
+                                admin_status_messages = {
+                                    "approved": f"✅ You approved request: {result.title}",
+                                    "rejected": f"❌ You rejected request: {result.title}",
+                                }
+                                await pool.enqueue_job("send_notification", str(admin_user.id), admin_status_messages[new_status], str(req_uuid))
                         except Exception as ex:
                             print(f"Error enqueuing notification: {ex}")
                             

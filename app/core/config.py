@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     LINE_MESSAGING_CHANNEL_SECRET: str = ""
     LINE_MESSAGING_ACCESS_TOKEN: str = ""
     LINE_LIFF_ID: str = ""
+    LINE_ADMIN_RICH_MENU_ID: str = ""
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

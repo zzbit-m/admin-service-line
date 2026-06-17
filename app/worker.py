@@ -140,10 +140,19 @@ async def send_notification(ctx, user_id: str, message: str, request_id: str = N
                     "contents": [
                         {
                             "type": "text",
-                            "text": "⚡ Service Portal",
+                            "text": "AI automated responses",
                             "color": "#ffffff",
                             "weight": "bold",
-                            "size": "sm"
+                            "size": "xs",
+                            "style": "italic"
+                        },
+                        {
+                            "type": "text",
+                            "text": "Service Portal",
+                            "color": "#ffffff",
+                            "weight": "bold",
+                            "size": "lg",
+                            "margin": "sm"
                         }
                     ]
                 },

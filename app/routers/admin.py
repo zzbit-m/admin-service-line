@@ -111,11 +111,20 @@ async def update_request_status(request_id: UUID, body: StatusUpdate, db: AsyncS
     try:
         pool = request.app.state.arq_pool
         status_messages = {
-            "approved": "\u2705 Your request has been approved.",
-            "rejected": "\u274c Your request has been rejected.",
+            "approved": "✅ Your request has been approved.",
+            "rejected": "❌ Your request has been rejected.",
         }
         if body.status in status_messages:
+            # Notify requester
             await pool.enqueue_job("send_notification", str(result.user_id), status_messages[body.status], str(request_id))
+            
+            # Notify processing admin
+            if current_user and current_user.line_user_id:
+                admin_status_messages = {
+                    "approved": f"✅ You approved request: {result.title}",
+                    "rejected": f"❌ You rejected request: {result.title}",
+                }
+                await pool.enqueue_job("send_notification", str(current_user.id), admin_status_messages[body.status], str(request_id))
     except Exception:
         pass
     return result

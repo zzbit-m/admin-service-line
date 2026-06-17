@@ -20,6 +20,29 @@ class StatusUpdate(BaseModel):
     admin_note: str | None = None
 
 
+class ConflictDetail(BaseModel):
+    id: UUID
+    title: str
+    full_name: str | None = None
+    start_time: datetime
+    end_time: datetime
+
+    model_config = {"from_attributes": True}
+
+    from pydantic import model_validator
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_user_info(cls, data):
+        user = getattr(data, "user", None)
+        if user is not None:
+            try:
+                data.full_name = user.full_name or user.email
+            except AttributeError:
+                pass
+        return data
+
+
 class RequestResponse(BaseModel):
     id: UUID
     user_id: UUID
@@ -38,6 +61,7 @@ class RequestResponse(BaseModel):
     resolved_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+    conflicts: list[ConflictDetail] = []
 
     model_config = {"from_attributes": True}
 
