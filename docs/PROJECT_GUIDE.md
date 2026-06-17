@@ -102,6 +102,27 @@ Empowers administrators to review, approve, or reject user booking requests dire
 
 ---
 
+### 🗺️ Dynamic Role-Based Rich Menus (New)
+Enhances chat navigation and restricts interface exposure dynamically.
+- **Role-Based Views**: Standard users see a 2-button menu (`New Request`, `My Requests`), while administrators automatically receive a 3-button menu (`New Request`, `My Requests`, `Admin Dashboard`) to prevent unauthorized menu exposure.
+- **Dynamic Linkage**: The menu dynamically binds/unbinds on LINE authentication login and webhook message events based on the database user role.
+
+---
+
+### 📬 Bidirectional Status Notifications (New)
+Confirms actions on both sides of a booking request status change.
+- **Requester Alert**: Pushes a LINE Flex Message to the user notifying them when their request is approved or rejected.
+- **Admin Confirmation**: Sends a confirmation LINE notification to the admin who approved/rejected the request, whether processed via chatbot or the web portal.
+
+---
+
+### ⚠️ Admin Scheduling Conflict Detection (New)
+Provides safety rails to prevent double-bookings of rooms and vehicles.
+- **Conflict Warning Banner**: When viewing a pending booking request, checks the database for any already approved bookings that overlap in time and highlights a warning banner.
+- **Daily Timeline View**: Adds a collapsible `Schedule` badge under the Resources tab. Admins can view today's daily 24h occupancy timeline chart (green for free, red blocks for occupied) to quickly inspect resource allocation.
+
+---
+
 ## 3. Developer & Setup Notes
 
 ### Port Configuration

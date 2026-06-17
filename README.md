@@ -1,136 +1,194 @@
 # Admin Service Portal
 
-Internal backend for managing service requests and resources with role-based access control.
+A role-based service request administration portal with backend APIs, LINE authentication, file attachments, and a React frontend.
 
-## Stack
+## Table of Contents
 
-- FastAPI + Python 3.11
+- [Overview](#overview)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Prerequisites](#prerequisites)
+- [Setup](#setup)
+- [Run the App](#run-the-app)
+- [LINE Development](#line-development)
+- [Useful Scripts](#useful-scripts)
+- [API Overview](#api-overview)
+- [Documentation](#documentation)
+- [License](#license)
+
+## Overview
+
+This repository contains the backend and frontend for the Admin Service Portal. It supports:
+
+- user and admin request workflows
+- request approval and rejection
+- file attachments
+- LINE LIFF login and webhook integration
+- background processing with Redis/ARQ
+- resource management and admin reporting
+
+## Features
+
+- Request submission, listing, and detail view
+- Admin request review and status updates
+- JWT and LINE authentication
+- Attachment upload and resource management
+- Redis caching and asynchronous worker processing
+- React + Vite frontend with admin/user views
+- Local dev automation via PowerShell scripts
+
+## Tech Stack
+
+- Backend: FastAPI, Python 3.11, Async SQLAlchemy, Alembic
+- Database: PostgreSQL 15
+- Cache/Queue: Redis + ARQ
+- Storage: MinIO / S3-compatible file storage via boto3
+- Auth: JWT, LINE Login (LIFF), LINE Messaging API
+- Frontend: React, TypeScript, Vite
+
+## Prerequisites
+
+- Python 3.11+
 - PostgreSQL 15
-- Async SQLAlchemy + asyncpg
-- MinIO (S3-compatible file storage via boto3)
-- Pydantic v2
-- JWT auth (python-jose + bcrypt)
-- Alembic migrations
-- Redis (cache + ARQ job queue)
-- LINE LIFF + Messaging API
-
----
+- Redis
+- MinIO or S3-compatible storage
+- Node.js + npm/yarn for frontend development
+- Optional: `cloudflared` for LINE webhook tunneling
 
 ## Setup
 
-1. Install Python 3.11+
-2. Create a PostgreSQL 15 database named `admin_portal`
-3. Copy `.env` and update `DATABASE_URL` with your credentials
-4. Change `SECRET_KEY` in `.env` to a secure random value
+1. Clone repository
+
+```bash
+git clone https://github.com/zzbit-m/admin-service-line.git
+cd "ADMIN SERVICE PORTAL"
+```
+
+2. Create and activate a Python virtual environment
+
+```bash
+python -m venv venv
+# Windows PowerShell
+env\Scripts\Activate.ps1
+# macOS / Linux
+# source venv/bin/activate
+```
+
+3. Install backend dependencies
 
 ```bash
 pip install -r requirements.txt
+```
+
+4. Configure environment variables
+
+- Copy `.env` from your template or create it manually
+- Set `DATABASE_URL`, `SECRET_KEY`, `REDIS_HOST`, `REDIS_PORT`, and LINE credentials
+
+5. Create PostgreSQL database
+
+```sql
+CREATE DATABASE admin_portal;
+```
+
+6. Run database migrations
+
+```bash
 alembic upgrade head
-uvicorn app.main:app --reload
 ```
 
-## Defaults
+## Run the App
 
-- API runs at `http://localhost:8001`
-- Docs at `http://localhost:8001/docs`
+### Backend
 
----
-
-## PowerShell Automation (Recommended)
-
-To start the entire application suite (Docker dependencies, database migrations, backend, worker, proxy, and Cloudflare tunnel) automatically in separate windows:
-```powershell
-.\start.ps1
-```
-*Note: The script automatically copies the generated Cloudflare LINE Webhook URL to your clipboard for quick pasting!*
-
-To stop all services and containers cleanly:
-```powershell
-.\stop.ps1
+```bash
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 ```
 
----
+The API will be available at `http://localhost:8001` and docs at `http://localhost:8001/docs`.
 
-## LINE Login (Dev)
+### Frontend
 
-1. Start backend: `uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload`
-2. Expose via cloudflared: `cloudflared tunnel --url http://localhost:8001`
-3. Update LIFF endpoint URL in LINE Console to `https://<tunnel-url>/liff-app.html`
-4. Update Messaging API Webhook URL to `https://<tunnel-url>/webhook/line`
-5. Open `https://<tunnel-url>/liff-app.html` in browser
-6. LINE profile `displayName` is stored in `full_name` column on users table
-
-### Dev Switch Mode (Testing without LINE)
-
-The LIFF app includes a **Switch Mode** button in the header for local testing — it lets you toggle between User and Admin views without going through LINE login.
-
-Activate it by appending `?dev=1` to the URL:
-
-```
-http://localhost:8001/liff-app.html?dev=1
+```bash
+cd frontend
+npm install
+npm run dev
 ```
 
-In dev mode, the app skips LIFF init and logs in using pre-seeded test credentials defined in `public/liff-app.html`. Use the **⇄ Switch** button in the header to toggle between user and admin roles.
-
----
-
-## Background Worker (ARQ)
-
-Run the ARQ worker to process LINE push notifications:
+### Worker
 
 ```bash
 python -m arq app.worker.WorkerSettings
 ```
 
-The worker reads Redis config from `.env` (`REDIS_HOST` / `REDIS_PORT`) and connects to the same PostgreSQL database to look up `line_user_id` before sending push messages via LINE Messaging API.
+## LINE Development
 
----
+1. Start the backend on port `8001`
+2. Expose it using `cloudflared tunnel --url http://localhost:8001`
+3. Update LINE Console settings:
+   - LIFF endpoint: `https://<tunnel-url>/liff-app.html`
+   - Webhook URL: `https://<tunnel-url>/webhook/line`
+4. Open the LIFF app URL in browser
 
-## Promote Admin
+### Dev mode without LINE
 
-Grant admin role to an existing user:
+For local testing, append `?dev=1` to the LIFF URL:
+
+```text
+http://localhost:8001/liff-app.html?dev=1
+```
+
+This enables a local switch mode that bypasses LINE login and uses development credentials.
+
+## Useful Scripts
+
+- Start all services: `.
+un.ps1` or `.
+un.ps1` if available
+- Stop all services: `.
+un.ps1` or `.
+un.ps1` if available
+- Promote admin user:
 
 ```bash
 python scripts/promote_admin.py <email>
 ```
 
----
+- Seed development accounts:
 
-## Progress
-
-| Phase | Description | Status |
-|-------|-------------|--------|
-| 1 | Auth (register/login), request CRUD, admin role, resources | ✅ Done |
-| 2 | Status transitions, time conflict detection, cancel, pagination | ✅ Done |
-| 3 | File attachments via MinIO S3, Redis cache for resources | ✅ Done |
-| 4 | n8n webhook on status changes, LINE login via LIFF | ✅ Done |
-| 5 | LINE `displayName` stored in `full_name` column | ✅ Done |
-| 6 | Redis cache for request status, ARQ worker scaffold | ✅ Done |
-| 7 | LINE push notifications via ARQ on approve/reject/cancel | ✅ Done |
-| 8 | n8n webhooks for request_created and request_cancelled events | ✅ Done |
-| 9 | Full LIFF app rewrite — user + admin views, `request_type` field | ✅ Done |
-| 10 | Comments section, Resource UI, Reports, and Front-End Booking | ✅ Done |
-| 11 | PowerShell automation scripts (`start.ps1` and `stop.ps1`) | ✅ Done |
-| 12 | Resource Deletion UI and database cascade/nullify handling | ✅ Done |
-| 13 | Premium Dark Mode, visual timeline scheduling, role-specific chatbot greetings, real display name database sync, and inline LINE postback approvals | ✅ Done |
-
----
+```bash
+python scripts/seed_dev_accounts.py
+```
 
 ## API Overview
 
 | Method | Path | Description |
 |--------|------|-------------|
 | POST | `/auth/register` | Register a new user |
-| POST | `/auth/login` | Login (returns JWT) |
+| POST | `/auth/login` | Login and receive JWT |
 | POST | `/auth/line` | Login via LINE access token |
-| GET | `/requests/me` | List my requests |
-| POST | `/requests` | Create a request |
+| GET | `/requests/me` | List current user requests |
+| POST | `/requests` | Create a new request |
 | GET | `/requests/{id}` | Get request detail |
 | PATCH | `/requests/{id}/cancel` | Cancel a pending request |
 | POST | `/requests/{id}/attachments` | Upload attachment |
-| GET | `/requests/{id}/attachments` | List attachments |
+| GET | `/requests/{id}/attachments` | List attachments for a request |
 | GET | `/admin/requests` | List all requests (admin) |
-| GET | `/admin/requests/{id}` | Get request detail (admin) |
-| PATCH | `/admin/requests/{id}/status` | Approve / reject (admin) |
-| GET | `/admin/resources` | List resources (cached) |
-| POST | `/admin/resources` | Create resource (admin) |
+| GET | `/admin/requests/{id}` | Get admin request detail |
+| PATCH | `/admin/requests/{id}/status` | Update request status |
+| GET | `/admin/resources` | List resources (admin) |
+| POST | `/admin/resources` | Create a new resource |
+
+## Documentation
+
+Additional project documentation is available in the `docs/` folder:
+
+- `docs/API_SPEC.md`
+- `docs/ARCHITECTURE.md`
+- `docs/PROJECT_GUIDE.md`
+- `docs/PROJECT_PLAN.md`
+- `docs/STRUCTURE.md`
+
+## License
+
+This project is licensed under the terms in `LICENSE`.
