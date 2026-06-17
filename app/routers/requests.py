@@ -18,10 +18,34 @@ router = APIRouter(prefix="/requests", tags=["requests"])
 
 
 @router.post("", response_model=RequestResponse, status_code=status.HTTP_201_CREATED)
-async def create_request(body: RequestCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+async def create_request(
+    body: RequestCreate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     sr = await request_service.create_request(
         db, current_user.id, body.title, body.description, body.resource_id, body.request_type, body.start_time, body.end_time
     )
+    # Notify admin LINE users about the new request
+    try:
+        pool = request.app.state.arq_pool
+        result = await db.execute(select(User).where(User.role == "admin", User.line_user_id != None))
+        admins = result.scalars().all()
+        if pool and admins:
+            for admin in admins:
+                try:
+                    await pool.enqueue_job(
+                        "send_notification",
+                        str(admin.id),
+                        f"📢 New request from {current_user.full_name or current_user.email}: {sr.title}",
+                        str(sr.id),
+                    )
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
     try:
         async with httpx.AsyncClient() as client:
             await client.post(
