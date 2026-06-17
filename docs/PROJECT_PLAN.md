@@ -100,6 +100,22 @@ Includes: `start.ps1` and `stop.ps1` scripts to automate starting Docker depende
 
 ---
 
+## Phase 12 — Complete ✅
+
+Resource Deletion in Admin Panel.
+
+Includes: `delete_resource` helper in `admin_service.py` to decouple requests from deleted resources (nullify foreign key) without breaking historical audit trails, corresponding `DELETE /admin/resources/{id}` route with Redis cache invalidation, custom FormSheet deletion callback trigger in UI, and full deletion confirmation flow.
+
+---
+
+## Phase 13 — Complete ✅
+
+LINE Chatbot and Portal/LIFF UI Enhancements.
+
+Includes: Custom greeting screens & Flex menus depending on user role (crimson/admin vs green/user theme), support for postback webhook callback events allowing direct inline approvals and rejection carousels in chat, browser-persisted Premium Dark Mode toggling via CSS custom properties, graphical horizontal Daily Schedule timeline bar visualizer inside resource selection details, and real-time LINE bot profile displayName fetch & sync with Postgres users to resolve default ID values.
+
+---
+
 ## Future Ideas
 
 - *(none)*

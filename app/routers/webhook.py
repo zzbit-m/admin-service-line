@@ -23,6 +23,20 @@ async def send_reply(reply_token: str, messages: list):
     except Exception as e:
         print(f"Error calling LINE reply API: {e}")
 
+async def get_line_profile(user_id: str) -> dict:
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"https://api.line.me/v2/bot/profile/{user_id}",
+                headers={"Authorization": f"Bearer {settings.LINE_MESSAGING_ACCESS_TOKEN}"},
+                timeout=3.0
+            )
+            if resp.status_code == 200:
+                return resp.json()
+    except Exception as e:
+        print(f"Error fetching LINE bot profile for {user_id}: {e}")
+    return {}
+
 @router.post("/webhook/line")
 async def line_webhook(request: Request):
     body = await request.body()
@@ -46,10 +60,16 @@ async def line_webhook(request: Request):
             text = event["message"]["text"].strip().lower()
 
             if text in ["hi", "hello", "hey", "menu", "help", "start", "home", "book", "booking", "สวัสดี", "เมนู"]:
-                # Check user role based on line_user_id
+                # Check user role and name based on line_user_id
                 line_user_id = event.get("source", {}).get("userId")
                 is_admin = False
+                user_name = "there"
                 if line_user_id:
+                    # Fetch real profile display name from LINE first
+                    profile = await get_line_profile(line_user_id)
+                    if profile and profile.get("displayName"):
+                        user_name = profile["displayName"]
+                        
                     try:
                         from sqlalchemy import select
                         from app.db.session import async_session_local
@@ -57,10 +77,18 @@ async def line_webhook(request: Request):
                         async with async_session_local() as db:
                             res = await db.execute(select(User).where(User.line_user_id == line_user_id))
                             user = res.scalar_one_or_none()
-                            if user and user.role == "admin":
-                                is_admin = True
-                    except Exception:
-                        pass
+                            if user:
+                                # Save/sync the real display name to database if missing or has default 'line_...' email prefix as name
+                                if not user.full_name or user.full_name.startswith("line_") or user.full_name == "":
+                                    user.full_name = user_name
+                                    await db.commit()
+                                else:
+                                    user_name = user.full_name
+                                    
+                                if user.role == "admin":
+                                    is_admin = True
+                    except Exception as e:
+                        print(f"Error checking DB profile: {e}")
 
                 # Build menu options
                 contents_list = [
@@ -172,7 +200,7 @@ async def line_webhook(request: Request):
                     contents_list.append({
                         "type": "box",
                         "layout": "horizontal",
-                        "backgroundColor": "#FEF2F2",
+                        "backgroundColor": "#F0FDFA",
                         "paddingAll": "14px",
                         "cornerRadius": "lg",
                         "action": {
@@ -199,13 +227,13 @@ async def line_webhook(request: Request):
                                         "text": "Admin Dashboard",
                                         "weight": "bold",
                                         "size": "sm",
-                                        "color": "#991B1B"
+                                        "color": "#0F766E"
                                     },
                                     {
                                         "type": "text",
                                         "text": "Manage requests, resources, and reports",
                                         "size": "xxs",
-                                        "color": "#DC2626",
+                                        "color": "#0D9488",
                                         "wrap": True
                                     }
                                 ]
@@ -214,14 +242,40 @@ async def line_webhook(request: Request):
                                 "type": "text",
                                 "text": ">",
                                 "size": "lg",
-                                "color": "#FCA5A5",
+                                "color": "#99F6E4",
                                 "flex": 0,
                                 "align": "end"
                             }
                         ]
                     })
 
+                # Dynamic customization for admins vs users (green theme)
+                start_color = "#06C755"
+                end_color = "#04964A"
+                title_text = "Admin Control Panel" if is_admin else "Service Portal"
+                subtitle_text = "System Control & Approvals" if is_admin else "Booking & Request Management"
+                sub_color = "#C8F5D8"
+                greeting_text = f"Hello Admin {user_name}! What would you like to manage?" if is_admin else f"Hi {user_name}! What would you like to do?"
+                footer_text = "Tip: You can type \"pending\" to review requests." if is_admin else "Tip: You can type \"hi\" anytime to see this again."
+
+                if is_admin:
+                    intro_text = (
+                        f"Welcome to the Admin Service Portal, {user_name}! ⚡\n\n"
+                        "This portal allows you to manage requests, review pending approvals, and view analytics reports. "
+                        "Tap a button below to get started."
+                    )
+                else:
+                    intro_text = (
+                        f"Welcome to the Service Portal, {user_name}! 📝\n\n"
+                        "You can book rooms/vehicles, submit maintenance tasks, and track request statuses. "
+                        "Tap a button below to submit a new request."
+                    )
+
                 await send_reply(reply_token, [
+                    {
+                        "type": "text",
+                        "text": intro_text
+                    },
                     {
                         "type": "flex",
                         "altText": "Welcome to Service Portal! Tap to get started.",
@@ -234,22 +288,22 @@ async def line_webhook(request: Request):
                                 "background": {
                                     "type": "linearGradient",
                                     "angle": "135deg",
-                                    "startColor": "#06C755",
-                                    "endColor": "#04964A"
+                                    "startColor": start_color,
+                                    "endColor": end_color
                                 },
                                 "paddingAll": "24px",
                                 "contents": [
                                     {
                                         "type": "text",
-                                        "text": "Service Portal",
+                                        "text": title_text,
                                         "weight": "bold",
                                         "color": "#ffffff",
                                         "size": "xl"
                                     },
                                     {
                                         "type": "text",
-                                        "text": "Booking & Request Management",
-                                        "color": "#C8F5D8",
+                                        "text": subtitle_text,
+                                        "color": sub_color,
                                         "size": "xs",
                                         "margin": "sm"
                                     }
@@ -263,7 +317,7 @@ async def line_webhook(request: Request):
                                 "contents": [
                                     {
                                         "type": "text",
-                                        "text": "Hi there! What would you like to do?",
+                                        "text": greeting_text,
                                         "weight": "bold",
                                         "size": "sm",
                                         "color": "#1E293B",
@@ -289,7 +343,7 @@ async def line_webhook(request: Request):
                                 "contents": [
                                     {
                                         "type": "text",
-                                        "text": "Tip: You can type \"hi\" anytime to see this again.",
+                                        "text": footer_text,
                                         "size": "xxs",
                                         "color": "#94A3B8",
                                         "align": "center"
@@ -572,9 +626,11 @@ async def line_webhook(request: Request):
                 line_user_id = event.get("source", {}).get("userId")
                 user = None
                 pending_count = 0
+                pending_requests = []
                 if line_user_id:
                     try:
                         from sqlalchemy import select, func
+                        from sqlalchemy.orm import selectinload
                         from app.db.session import async_session_local
                         from app.models.user import User
                         from app.models.request import ServiceRequest
@@ -588,8 +644,19 @@ async def line_webhook(request: Request):
                                     .where(ServiceRequest.status == "pending")
                                 )
                                 pending_count = count_res.scalar() or 0
-                    except Exception:
-                        pass
+
+                                # get first 4 pending requests for carousel cards
+                                if pending_count > 0:
+                                    reqs_res = await db.execute(
+                                        select(ServiceRequest)
+                                        .options(selectinload(ServiceRequest.user))
+                                        .where(ServiceRequest.status == "pending")
+                                        .order_by(ServiceRequest.created_at.asc())
+                                        .limit(4)
+                                    )
+                                    pending_requests = reqs_res.scalars().all()
+                    except Exception as e:
+                        print(f"Error loading pending requests: {e}")
 
                 if not user or user.role != "admin":
                     # Non-admin trying to access admin dashboard info
@@ -601,7 +668,7 @@ async def line_webhook(request: Request):
                     ])
                 else:
                     # Admin summary card
-                    flex_contents = {
+                    summary_bubble = {
                         "type": "bubble",
                         "size": "mega",
                         "header": {
@@ -715,39 +782,262 @@ async def line_webhook(request: Request):
                         }
                     }
 
+                    bubbles = [summary_bubble]
+                    type_emojis = {
+                        "room_booking": "🏢",
+                        "vehicle_booking": "🚗",
+                        "maintenance": "🔧",
+                        "other": "📋"
+                    }
+                    for r in pending_requests:
+                        requester_name = r.user.full_name or r.user.email if r.user else "Unknown User"
+                        emoji = type_emojis.get(r.request_type, "📋")
+                        time_str = "No time specified"
+                        if r.start_time:
+                            time_str = f"{r.start_time.strftime('%b %d, %H:%M')}"
+                            if r.end_time:
+                                time_str += f" - {r.end_time.strftime('%H:%M')}"
+                        
+                        req_bubble = {
+                            "type": "bubble",
+                            "size": "mega",
+                            "header": {
+                                "type": "box",
+                                "layout": "vertical",
+                                "background": {
+                                    "type": "linearGradient",
+                                    "angle": "135deg",
+                                    "startColor": "#3B82F6",
+                                    "endColor": "#1E40AF"
+                                },
+                                "paddingAll": "20px",
+                                "contents": [
+                                    {
+                                        "type": "text",
+                                        "text": "Review Request",
+                                        "weight": "bold",
+                                        "color": "#FFFFFF",
+                                        "size": "md"
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": f"Priority: {(r.priority or 'normal').upper()}",
+                                        "color": "#BFDBFE",
+                                        "size": "xxs",
+                                        "margin": "xs"
+                                    }
+                                ]
+                            },
+                            "body": {
+                                "type": "box",
+                                "layout": "vertical",
+                                "paddingAll": "16px",
+                                "spacing": "md",
+                                "backgroundColor": "#F8FAFC",
+                                "contents": [
+                                    {
+                                        "type": "box",
+                                        "layout": "vertical",
+                                        "spacing": "xs",
+                                        "contents": [
+                                            {
+                                                "type": "text",
+                                                "text": f"{emoji} {r.title}",
+                                                "weight": "bold",
+                                                "size": "sm",
+                                                "color": "#1E293B",
+                                                "wrap": True
+                                            },
+                                            {
+                                                "type": "text",
+                                                "text": f"Requester: {requester_name}",
+                                                "size": "xs",
+                                                "color": "#64748B"
+                                            },
+                                            {
+                                                "type": "text",
+                                                "text": f"Time: {time_str}",
+                                                "size": "xs",
+                                                "color": "#64748B"
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        "type": "separator",
+                                        "color": "#E2E8F0"
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": r.description or "No description provided.",
+                                        "size": "xs",
+                                        "color": "#475569",
+                                        "wrap": True,
+                                        "maxLines": 3
+                                    }
+                                ]
+                            },
+                            "footer": {
+                                "type": "box",
+                                "layout": "horizontal",
+                                "spacing": "md",
+                                "paddingAll": "12px",
+                                "contents": [
+                                    {
+                                        "type": "button",
+                                        "action": {
+                                            "type": "postback",
+                                            "label": "Approve",
+                                            "data": f"action=approve&id={r.id}",
+                                            "displayText": "Approving request..."
+                                        },
+                                        "style": "primary",
+                                        "color": "#06C755",
+                                        "height": "sm"
+                                    },
+                                    {
+                                        "type": "button",
+                                        "action": {
+                                            "type": "postback",
+                                            "label": "Reject",
+                                            "data": f"action=reject&id={r.id}",
+                                            "displayText": "Rejecting request..."
+                                        },
+                                        "style": "primary",
+                                        "color": "#EF4444",
+                                        "height": "sm"
+                                    }
+                                ]
+                            }
+                        }
+                        bubbles.append(req_bubble)
+
+                    flex_payload = {
+                        "type": "carousel",
+                        "contents": bubbles
+                    } if len(bubbles) > 1 else summary_bubble
+
                     await send_reply(reply_token, [
                         {
                             "type": "flex",
                             "altText": "Admin Review Summary",
-                            "contents": flex_contents
+                            "contents": flex_payload
                         }
                     ])
-            else:
-                await send_reply(reply_token, [
-                    {
-                        "type": "text",
-                        "text": "Hey! I didn't quite get that.\n\nTry saying \"hi\" or \"help\" and I'll show you what I can do!",
-                        "quickReply": {
-                            "items": [
-                                {
-                                    "type": "action",
-                                    "action": {
-                                        "type": "message",
-                                        "label": "Show Options",
-                                        "text": "hi"
-                                    }
-                                },
-                                {
-                                    "type": "action",
-                                    "action": {
-                                        "type": "uri",
-                                        "label": "Open Portal",
-                                        "uri": LIFF_URL
-                                    }
-                                }
-                            ]
+        elif event.get("type") == "postback":
+            reply_token = event["replyToken"]
+            line_user_id = event.get("source", {}).get("userId")
+            postback_data = event.get("postback", {}).get("data", "")
+            
+            # Parse parameters
+            params = {}
+            for pair in postback_data.split("&"):
+                if "=" in pair:
+                    k, v = pair.split("=", 1)
+                    params[k] = v
+            
+            action = params.get("action")
+            request_id_str = params.get("id")
+            
+            if action in ["approve", "reject"] and request_id_str:
+                # 1. Verify admin permissions
+                is_admin = False
+                admin_user = None
+                try:
+                    from sqlalchemy import select
+                    from app.db.session import async_session_local
+                    from app.models.user import User
+                    async with async_session_local() as db:
+                        res = await db.execute(select(User).where(User.line_user_id == line_user_id))
+                        admin_user = res.scalar_one_or_none()
+                        if admin_user and admin_user.role == "admin":
+                            is_admin = True
+                except Exception as e:
+                    print(f"Error checking admin: {e}")
+                
+                if not is_admin or not admin_user:
+                    await send_reply(reply_token, [
+                        {
+                            "type": "text",
+                            "text": "⚠️ Access Denied: Only administrators can approve or reject requests."
                         }
-                    }
-                ])
+                    ])
+                    continue
+                
+                # 2. Process status update
+                new_status = "approved" if action == "approve" else "rejected"
+                try:
+                    from uuid import UUID
+                    from app.services import admin_service
+                    from app.core.cache import r as redis_client
+                    
+                    req_uuid = UUID(request_id_str)
+                    
+                    async with async_session_local() as db:
+                        # Update status using the admin_service helper
+                        result = await admin_service.update_request_status(
+                            db, 
+                            req_uuid, 
+                            new_status, 
+                            admin_user.id, 
+                            f"Processed via LINE Chatbot by {admin_user.full_name or admin_user.email}"
+                        )
+                        
+                        # Invalidate cache
+                        try:
+                            redis_client.delete(f"request:{req_uuid}")
+                        except Exception:
+                            pass
+                        
+                        # Fetch user details
+                        from app.models.user import User
+                        user_res = await db.execute(select(User).where(User.id == result.user_id))
+                        user_obj = user_res.scalar_one_or_none()
+                        user_name = (user_obj.full_name or user_obj.email) if user_obj else "Unknown"
+                        user_email = user_obj.email if user_obj else "unknown"
+                        
+                        # Send webhook to n8n
+                        try:
+                            async with httpx.AsyncClient() as client:
+                                await client.post(
+                                    "http://localhost:5678/webhook/48c0cd3b-20d8-43c2-a4dc-e6b5dfd208f9",
+                                    json={
+                                        "event": "status_changed",
+                                        "request_id": str(req_uuid),
+                                        "status": new_status,
+                                        "admin_note": f"Processed via LINE Chatbot by {admin_user.full_name or admin_user.email}",
+                                        "user_id": str(result.user_id),
+                                        "user_name": user_name,
+                                        "user_email": user_email,
+                                    },
+                                    timeout=3.0
+                                )
+                        except Exception as ex:
+                            print(f"Error sending n8n webhook: {ex}")
+                        
+                        # Enqueue LINE notification for the requester
+                        try:
+                            pool = request.app.state.arq_pool
+                            status_messages = {
+                                "approved": "✅ Your request has been approved.",
+                                "rejected": "❌ Your request has been rejected.",
+                            }
+                            await pool.enqueue_job("send_notification", str(result.user_id), status_messages[new_status], str(req_uuid))
+                        except Exception as ex:
+                            print(f"Error enqueuing notification: {ex}")
+                            
+                    emoji = "✅" if new_status == "approved" else "❌"
+                    await send_reply(reply_token, [
+                        {
+                            "type": "text",
+                            "text": f"{emoji} Request successfully {new_status}!"
+                        }
+                    ])
+                except Exception as ex:
+                    await send_reply(reply_token, [
+                        {
+                            "type": "text",
+                            "text": f"⚠️ Action failed: {str(ex)}"
+                        }
+                    ])
 
     return {"status": "ok"}

@@ -80,6 +80,28 @@ Converts plain text push notifications into gorgeous interactive bubbles with co
 
 ---
 
+### 🌙 Premium Dark Mode (New)
+Provides a modern dark appearance for both user and admin roles.
+- **Persistent Preferences**: Saves the layout theme selection (`light` or `dark`) in the browser's `localStorage` to prevent color flashes on reload.
+- **Dynamic Themes**: Styled using standard CSS variables (`var(--white)`, `var(--slate-50)`, etc.) for smooth and harmonious role transitions.
+
+---
+
+### 📅 Resource Booking Timeline (New)
+Helps users preview resource schedules and choose non-overlapping booking slots.
+- **Visual Schedule View**: Generates a horizontal 24h schedule progress bar with red block indicators representing occupied intervals and green blocks indicating availability.
+- **Client-Side Verification**: Intercepts booking submission if selected times conflict with approved slots.
+
+---
+
+### ⚡ LINE Bot Inline Quick Approvals (New)
+Empowers administrators to review, approve, or reject user booking requests directly within their chat.
+- **Interactive Review Cards**: Typing `pending` returns a carousel of pending requests directly inside the chat.
+- **LINE Postback Handlers**: Admins can tap **Approve** or **Reject** inline, changing status and dispatching notification triggers without loading the LIFF client.
+- **Dynamic Display Name Sync**: Queries LINE's Messaging API user profile details on message events to replace placeholder user IDs (`line_...`) with real user display names, updating the PostgreSQL database automatically.
+
+---
+
 ## 3. Developer & Setup Notes
 
 ### Port Configuration

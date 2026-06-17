@@ -111,6 +111,8 @@ python scripts/promote_admin.py <email>
 | 9 | Full LIFF app rewrite — user + admin views, `request_type` field | ✅ Done |
 | 10 | Comments section, Resource UI, Reports, and Front-End Booking | ✅ Done |
 | 11 | PowerShell automation scripts (`start.ps1` and `stop.ps1`) | ✅ Done |
+| 12 | Resource Deletion UI and database cascade/nullify handling | ✅ Done |
+| 13 | Premium Dark Mode, visual timeline scheduling, role-specific chatbot greetings, real display name database sync, and inline LINE postback approvals | ✅ Done |
 
 ---
 

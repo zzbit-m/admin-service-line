@@ -152,6 +152,14 @@ async def update_resource(resource_id: UUID, body: ResourceUpdate, db: AsyncSess
     return resource
 
 
+@router.delete("/resources/{resource_id}")
+async def delete_resource(resource_id: UUID, db: AsyncSession = Depends(get_db), current_user: User = Depends(require_admin)):
+    await admin_service.delete_resource(db, resource_id)
+    r.delete("resources:all")
+    return {"message": "Resource deleted successfully"}
+
+
+
 
 @router.get("/stats/export")
 async def export_stats(

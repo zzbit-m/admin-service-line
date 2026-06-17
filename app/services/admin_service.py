@@ -181,6 +181,26 @@ async def update_resource(
     return resource
 
 
+async def delete_resource(db: AsyncSession, resource_id: UUID) -> None:
+    result = await db.execute(select(Resource).where(Resource.id == resource_id))
+    resource = result.scalar_one_or_none()
+    if resource is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Resource not found",
+        )
+    
+    from sqlalchemy import update
+    await db.execute(
+        update(ServiceRequest)
+        .where(ServiceRequest.resource_id == resource_id)
+        .values(resource_id=None)
+    )
+    await db.delete(resource)
+    await db.commit()
+
+
+
 async def get_admin_stats(db: AsyncSession) -> dict:
     from sqlalchemy import func, literal_column
     from app.models.user import User
