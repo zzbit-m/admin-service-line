@@ -1,0 +1,18 @@
+---
+description: Enforce one-PR-at-a-time when a multi-PR plan exists
+alwaysApply: true
+---
+
+# Incremental PR workflow
+
+When `docs/remediation.md` or an attached plan defines **multiple PRs**:
+
+1. Implement **one PR scope only**, then stop for review/merge before starting the next.
+2. **One branch per PR** — branch from latest `main`, not from a prior fix branch.
+3. **One commit theme per PR** — do not batch PR1–PR4 into one branch unless the user explicitly asks for a single PR with multiple commits.
+4. Update checkboxes in `docs/remediation.md` in the **same PR** that completes that scope.
+5. Run `pytest tests/ -v` for the tests introduced in that PR before marking done.
+
+If the user says "implement the plan" with multiple PRs listed, ask once whether they want **sequential PRs** (default) or **one PR with logical commits** — default to sequential.
+
+After each PR is merged locally or on remote, `git checkout main && git pull` before creating the next branch.

@@ -995,7 +995,7 @@ async def line_webhook(request: Request):
                 try:
                     from uuid import UUID
                     from app.services import admin_service
-                    from app.core.cache import r as redis_client
+                    from app.core.cache import invalidate_request_cache
                     
                     req_uuid = UUID(request_id_str)
                     
@@ -1010,10 +1010,7 @@ async def line_webhook(request: Request):
                         )
                         
                         # Invalidate cache
-                        try:
-                            redis_client.delete(f"request:{req_uuid}")
-                        except Exception:
-                            pass
+                        invalidate_request_cache(req_uuid)
                         
                         # Fetch user details
                         from app.models.user import User
@@ -1023,23 +1020,19 @@ async def line_webhook(request: Request):
                         user_email = user_obj.email if user_obj else "unknown"
                         
                         # Send webhook to n8n
-                        try:
-                            async with httpx.AsyncClient() as client:
-                                await client.post(
-                                    "http://localhost:5678/webhook/48c0cd3b-20d8-43c2-a4dc-e6b5dfd208f9",
-                                    json={
-                                        "event": "status_changed",
-                                        "request_id": str(req_uuid),
-                                        "status": new_status,
-                                        "admin_note": f"Processed via LINE Chatbot by {admin_user.full_name or admin_user.email}",
-                                        "user_id": str(result.user_id),
-                                        "user_name": user_name,
-                                        "user_email": user_email,
-                                    },
-                                    timeout=3.0
-                                )
-                        except Exception as ex:
-                            print(f"Error sending n8n webhook: {ex}")
+                        from app.core.webhooks import fire_n8n_event
+
+                        fire_n8n_event(
+                            {
+                                "event": "status_changed",
+                                "request_id": str(req_uuid),
+                                "status": new_status,
+                                "admin_note": f"Processed via LINE Chatbot by {admin_user.full_name or admin_user.email}",
+                                "user_id": str(result.user_id),
+                                "user_name": user_name,
+                                "user_email": user_email,
+                            },
+                        )
                         
                         # Enqueue LINE notification for the requester and admin
                         try:

@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.request import ServiceRequest
 from app.models.resource import Resource
+from app.services.booking_conflict import assert_no_booking_conflict
 
 VALID_TRANSITIONS = {
     "pending": {"approved", "rejected"},
@@ -119,6 +120,21 @@ async def update_request_status(db: AsyncSession, request_id: UUID, new_status: 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Cannot transition from '{sr.status}' to '{new_status}'",
+        )
+
+    if (
+        new_status == "approved"
+        and sr.resource_id
+        and sr.start_time
+        and sr.end_time
+    ):
+        await assert_no_booking_conflict(
+            db,
+            sr.resource_id,
+            sr.start_time,
+            sr.end_time,
+            exclude_request_id=request_id,
+            blocking_statuses=("approved",),
         )
 
     sr.status = new_status

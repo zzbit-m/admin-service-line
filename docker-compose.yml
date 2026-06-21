@@ -19,6 +19,8 @@ services:
 
   db:
     image: postgres:15
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_DB: admin_portal
       POSTGRES_USER: postgres
@@ -30,6 +32,8 @@ services:
 
   redis:
     image: redis:7-alpine
+    ports:
+      - "6379:6379"
     networks:
       - portal-network
 
