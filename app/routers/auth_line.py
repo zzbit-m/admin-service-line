@@ -1,3 +1,4 @@
+import secrets
 import uuid
 from datetime import datetime, timezone
 
@@ -8,7 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.security import create_access_token
+from app.core.security import create_access_token, hash_password
 from app.db.session import get_db
 
 router = APIRouter()
@@ -65,7 +66,7 @@ async def line_login(body: LineAuthRequest, db: AsyncSession = Depends(get_db)):
                 "id": str(uuid.uuid4()),
                 "email": f"line_{line_user_id}@line.local",
                 "name": profile.get("displayName", ""),
-                "pw": "LINE_OAUTH",
+                "pw": hash_password(secrets.token_hex(32)),
                 "lid": line_user_id,
                 "now": datetime.now(timezone.utc),
             }

@@ -2,6 +2,8 @@ import os
 import socket
 
 os.environ.setdefault("SECRET_KEY", "pytest-secret-key-not-changeme-32b")
+os.environ.setdefault("LINE_CHANNEL_ID", "2010375597")
+os.environ.setdefault("LINE_MESSAGING_CHANNEL_SECRET", "test-messaging-channel-secret")
 
 import uuid
 from unittest.mock import AsyncMock
