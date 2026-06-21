@@ -1,13 +1,12 @@
 from uuid import UUID
 
-import httpx
-
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import get_cached_request, invalidate_request_cache, set_cached_request
 from app.core.dependencies import get_current_user
+from app.core.webhooks import fire_n8n_event
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.request import RequestCreate, RequestResponse
@@ -20,13 +19,13 @@ router = APIRouter(prefix="/requests", tags=["requests"])
 async def create_request(
     body: RequestCreate,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     sr = await request_service.create_request(
         db, current_user.id, body.title, body.description, body.resource_id, body.request_type, body.start_time, body.end_time
     )
-    # Notify admin LINE users about the new request
     try:
         pool = request.app.state.arq_pool
         result = await db.execute(select(User).where(User.role == "admin", User.line_user_id != None))
@@ -45,23 +44,18 @@ async def create_request(
     except Exception:
         pass
 
-    try:
-        async with httpx.AsyncClient() as client:
-            await client.post(
-                "http://localhost:5678/webhook/48c0cd3b-20d8-43c2-a4dc-e6b5dfd208f9",
-                json={
-                    "event": "request_created",
-                    "request_id": str(sr.id),
-                    "user_id": str(sr.user_id),
-                    "user_name": current_user.full_name or current_user.email,
-                    "user_email": current_user.email,
-                    "title": sr.title,
-                    "resource_id": str(sr.resource_id) if sr.resource_id else None,
-                },
-                timeout=3.0,
-            )
-    except Exception:
-        pass
+    fire_n8n_event(
+        {
+            "event": "request_created",
+            "request_id": str(sr.id),
+            "user_id": str(sr.user_id),
+            "user_name": current_user.full_name or current_user.email,
+            "user_email": current_user.email,
+            "title": sr.title,
+            "resource_id": str(sr.resource_id) if sr.resource_id else None,
+        },
+        background_tasks,
+    )
     return sr
 
 
@@ -82,7 +76,13 @@ async def archive_my_history(db: AsyncSession = Depends(get_db), current_user: U
 
 
 @router.patch("/{request_id}/cancel", response_model=RequestResponse)
-async def cancel_request(request_id: UUID, db: AsyncSession = Depends(get_db), request: Request = None, current_user: User = Depends(get_current_user)):
+async def cancel_request(
+    request_id: UUID,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    request: Request = None,
+    current_user: User = Depends(get_current_user),
+):
     sr = await request_service.cancel_request(db, current_user.id, request_id)
     invalidate_request_cache(request_id)
     try:
@@ -90,21 +90,16 @@ async def cancel_request(request_id: UUID, db: AsyncSession = Depends(get_db), r
         await pool.enqueue_job("send_notification", str(sr.user_id), "\U0001f6ab Your request has been cancelled.", str(request_id))
     except Exception:
         pass
-    try:
-        async with httpx.AsyncClient() as client:
-            await client.post(
-                "http://localhost:5678/webhook/48c0cd3b-20d8-43c2-a4dc-e6b5dfd208f9",
-                json={
-                    "event": "request_cancelled",
-                    "request_id": str(request_id),
-                    "user_id": str(sr.user_id),
-                    "user_name": current_user.full_name or current_user.email,
-                    "user_email": current_user.email,
-                },
-                timeout=3.0,
-            )
-    except Exception:
-        pass
+    fire_n8n_event(
+        {
+            "event": "request_cancelled",
+            "request_id": str(request_id),
+            "user_id": str(sr.user_id),
+            "user_name": current_user.full_name or current_user.email,
+            "user_email": current_user.email,
+        },
+        background_tasks,
+    )
     return sr
 
 
@@ -120,8 +115,6 @@ async def get_request(request_id: UUID, db: AsyncSession = Depends(get_db), curr
     return sr
 
 
-# ─── COMMENTS ENDPOINTS ──────────────────────────────────────
-
 from app.schemas.comment import CommentCreate, CommentResponse
 from app.services import comment_service
 from app.models.request import ServiceRequest
@@ -131,6 +124,7 @@ from app.models.request import ServiceRequest
 async def create_comment(
     request_id: UUID,
     body: CommentCreate,
+    background_tasks: BackgroundTasks,
     request: Request = None,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -139,12 +133,10 @@ async def create_comment(
         db, request_id, current_user.id, current_user.role, body.content
     )
 
-    # Fetch request owner ID for notification logic
     req_owner_id = await db.scalar(
         select(ServiceRequest.user_id).where(ServiceRequest.id == request_id)
     )
 
-    # 1. Admin comments -> notify User via LINE push message
     if current_user.role == "admin" and req_owner_id and req_owner_id != current_user.id:
         try:
             pool = request.app.state.arq_pool
@@ -158,25 +150,19 @@ async def create_comment(
         except Exception:
             pass
 
-    # 2. User comments -> trigger n8n webhook (fire-and-forget)
     elif current_user.role != "admin" and req_owner_id:
-        try:
-            async with httpx.AsyncClient() as client:
-                await client.post(
-                    "http://localhost:5678/webhook/48c0cd3b-20d8-43c2-a4dc-e6b5dfd208f9",
-                    json={
-                        "event": "comment_added",
-                        "request_id": str(request_id),
-                        "comment_id": str(comment.id),
-                        "user_id": str(current_user.id),
-                        "user_name": current_user.full_name or current_user.email,
-                        "user_email": current_user.email,
-                        "content": comment.content,
-                    },
-                    timeout=3.0,
-                )
-        except Exception:
-            pass
+        fire_n8n_event(
+            {
+                "event": "comment_added",
+                "request_id": str(request_id),
+                "comment_id": str(comment.id),
+                "user_id": str(current_user.id),
+                "user_name": current_user.full_name or current_user.email,
+                "user_email": current_user.email,
+                "content": comment.content,
+            },
+            background_tasks,
+        )
 
     return comment
 

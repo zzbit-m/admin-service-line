@@ -1,12 +1,11 @@
 import json
 from uuid import UUID
 
-import httpx
-
-from fastapi import APIRouter, Depends, Query, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import invalidate_request_cache, r
+from app.core.webhooks import fire_n8n_event
 
 from app.core.dependencies import require_admin
 from app.db.session import get_db
@@ -79,7 +78,14 @@ async def get_request(request_id: UUID, db: AsyncSession = Depends(get_db), curr
 
 
 @router.patch("/requests/{request_id}/status", response_model=RequestResponse)
-async def update_request_status(request_id: UUID, body: StatusUpdate, db: AsyncSession = Depends(get_db), request: Request = None, current_user: User = Depends(require_admin)):
+async def update_request_status(
+    request_id: UUID,
+    body: StatusUpdate,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    request: Request = None,
+    current_user: User = Depends(require_admin),
+):
     result = await admin_service.update_request_status(db, request_id, body.status, current_user.id, body.admin_note)
     invalidate_request_cache(request_id)
     try:
@@ -90,19 +96,18 @@ async def update_request_status(request_id: UUID, body: StatusUpdate, db: AsyncS
         user_name = (user_obj.full_name or user_obj.email) if user_obj else "Unknown"
         user_email = user_obj.email if user_obj else "unknown"
 
-        async with httpx.AsyncClient() as client:
-            await client.post(
-                "http://localhost:5678/webhook/48c0cd3b-20d8-43c2-a4dc-e6b5dfd208f9",
-                    json={
-                        "event": "status_changed",
-                        "request_id": str(request_id),
-                        "status": body.status,
-                        "admin_note": body.admin_note,
-                        "user_id": str(result.user_id),
-                        "user_name": user_name,
-                        "user_email": user_email,
-                    }
-            )
+        fire_n8n_event(
+            {
+                "event": "status_changed",
+                "request_id": str(request_id),
+                "status": body.status,
+                "admin_note": body.admin_note,
+                "user_id": str(result.user_id),
+                "user_name": user_name,
+                "user_email": user_email,
+            },
+            background_tasks,
+        )
     except Exception:
         pass
     try:

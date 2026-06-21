@@ -34,6 +34,8 @@ def validate_settings(s: Settings) -> None:
         raise RuntimeError("LINE_CHANNEL_ID is required")
     if not s.LINE_MESSAGING_CHANNEL_SECRET.strip():
         raise RuntimeError("LINE_MESSAGING_CHANNEL_SECRET is required")
+    if not s.N8N_WEBHOOK_URL.strip():
+        raise RuntimeError("N8N_WEBHOOK_URL is required")
 
 
 settings = Settings()

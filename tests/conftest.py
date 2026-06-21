@@ -3,7 +3,7 @@ import socket
 
 os.environ.setdefault("SECRET_KEY", "pytest-secret-key-not-changeme-32b")
 os.environ.setdefault("LINE_CHANNEL_ID", "2010375597")
-os.environ.setdefault("LINE_MESSAGING_CHANNEL_SECRET", "test-messaging-channel-secret")
+os.environ.setdefault("N8N_WEBHOOK_URL", "http://localhost:5678/webhook/test-uuid")
 
 import uuid
 from unittest.mock import AsyncMock
