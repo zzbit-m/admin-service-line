@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.request import ServiceRequest
+from app.services.booking_conflict import assert_no_booking_conflict
 
 
 async def create_request(
@@ -20,19 +21,7 @@ async def create_request(
     end_time: datetime | None = None,
 ) -> ServiceRequest:
     if resource_id and start_time and end_time:
-        conflict = await db.execute(
-            select(ServiceRequest).where(
-                ServiceRequest.resource_id == resource_id,
-                ServiceRequest.status.in_(["pending", "approved"]),
-                ServiceRequest.start_time < end_time,
-                ServiceRequest.end_time > start_time,
-            )
-        )
-        if conflict.scalar_one_or_none() is not None:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Resource is not available for the requested time slot",
-            )
+        await assert_no_booking_conflict(db, resource_id, start_time, end_time)
 
     sr = ServiceRequest(
         user_id=user_id,
